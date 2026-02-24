@@ -1,0 +1,247 @@
+// DentraCRM - Prisma Schema
+// Multi-tenant Lead Management for Dental Clinics
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ── CLINICS ──────────────────────────────────────────────
+model Clinic {
+  id        String   @id @default(cuid())
+  tenantId  String
+  name      String
+  slug      String   // "ganapathy", "rs-puram"
+  address   String?
+  phone     String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  leads        Lead[]
+  users        UserClinicAccess[]
+  appointments Appointment[]
+
+  @@unique([tenantId, slug])
+  @@index([tenantId])
+}
+
+// ── USERS ────────────────────────────────────────────────
+model User {
+  id           String    @id @default(cuid())
+  tenantId     String
+  email        String    @unique
+  passwordHash String
+  name         String
+  role         Role      @default(CLINIC_STAFF)
+  isActive     Boolean   @default(true)
+  lastLogin    DateTime?
+  inviteToken  String?
+  inviteExpiry DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  clinicAccess  UserClinicAccess[]
+  notes         Note[]
+  statusChanges LeadStatusHistory[]
+
+  @@index([tenantId])
+  @@index([email])
+}
+
+enum Role {
+  SUPER_ADMIN
+  ADMIN
+  CLINIC_STAFF
+}
+
+model UserClinicAccess {
+  id       String @id @default(cuid())
+  userId   String
+  clinicId String
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  clinic Clinic @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, clinicId])
+}
+
+// ── LEADS ────────────────────────────────────────────────
+model Lead {
+  id       String  @id @default(cuid())
+  tenantId String
+  clinicId String? // null = TBD/unassigned
+
+  // Contact Info
+  name  String
+  phone String
+  email String?
+  age   Int?
+
+  // Classification
+  status            LeadStatus @default(NEW)
+  priority          Priority   @default(NEW)
+  source            LeadSource @default(OTHER)
+  treatmentInterest String? // braces, aligners, implants, etc.
+
+  // Follow-up
+  followUpDate    DateTime?
+  lastContactedAt DateTime?
+  nextAction      String?
+
+  // Meta Ads tracking
+  adSetName    String?
+  campaignName String?
+  adId         String?
+
+  // Timestamps
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime? // soft delete
+
+  clinic        Clinic?             @relation(fields: [clinicId], references: [id])
+  notes         Note[]
+  statusHistory LeadStatusHistory[]
+  appointments  Appointment[]
+
+  @@index([tenantId])
+  @@index([tenantId, clinicId])
+  @@index([tenantId, status])
+  @@index([tenantId, followUpDate])
+  @@index([tenantId, clinicId, status])
+}
+
+enum LeadStatus {
+  NEW
+  ATTEMPTING
+  CONNECTED
+  APPOINTMENT_BOOKED
+  VISITED
+  TREATMENT_STARTED
+  RESCHEDULED
+  LOST
+  DNC
+  DNR
+}
+
+enum Priority {
+  HOT
+  WARM
+  COLD
+  NEW
+  APPOINTMENT
+  VISITED
+}
+
+enum LeadSource {
+  META_ADS
+  GOOGLE_ADS
+  ORGANIC
+  WHATSAPP
+  REFERRAL
+  WALK_IN
+  IVR
+  OTHER
+}
+
+// ── NOTES ────────────────────────────────────────────────
+model Note {
+  id          String   @id @default(cuid())
+  leadId      String
+  authorId    String
+  content     String   @db.Text
+  type        NoteType @default(GENERAL)
+  isAdminOnly Boolean  @default(false) // hidden from clinic_staff
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  lead   Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  author User @relation(fields: [authorId], references: [id])
+
+  @@index([leadId])
+  @@index([authorId])
+}
+
+enum NoteType {
+  CALL_NOTE
+  WHATSAPP_NOTE
+  VISIT_NOTE
+  INTERNAL
+  FOLLOW_UP
+  GENERAL
+}
+
+// ── STATUS HISTORY ───────────────────────────────────────
+model LeadStatusHistory {
+  id         String      @id @default(cuid())
+  leadId     String
+  fromStatus LeadStatus?
+  toStatus   LeadStatus
+  changedBy  String // user id
+  reason     String?
+  createdAt  DateTime    @default(now())
+
+  lead User @relation(fields: [changedBy], references: [id])
+  leadRecord Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@index([leadId])
+}
+
+// ── APPOINTMENTS ─────────────────────────────────────────
+model Appointment {
+  id          String            @id @default(cuid())
+  leadId      String
+  clinicId    String
+  scheduledAt DateTime
+  duration    Int               @default(30) // minutes
+  status      AppointmentStatus @default(SCHEDULED)
+  notes       String?
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  lead   Lead   @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  clinic Clinic @relation(fields: [clinicId], references: [id])
+
+  @@index([clinicId, scheduledAt])
+  @@index([leadId])
+}
+
+enum AppointmentStatus {
+  SCHEDULED
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+  RESCHEDULED
+}
+
+// ── PLATFORM-LEVEL TENANT REGISTRY ───────────────────────
+model Tenant {
+  id        String       @id @default(cuid())
+  name      String
+  slug      String       @unique
+  plan      TenantPlan   @default(STARTER)
+  status    TenantStatus @default(ACTIVE)
+  dbUrl     String? // Connection string for tenant's DB
+  logoUrl   String?
+  colorPrimary String?
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  @@index([slug])
+}
+
+enum TenantPlan {
+  STARTER
+  GROWTH
+  ENTERPRISE
+}
+
+enum TenantStatus {
+  ACTIVE
+  SUSPENDED
+  CANCELLED
+}
