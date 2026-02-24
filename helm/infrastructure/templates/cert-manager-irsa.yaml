@@ -1,0 +1,14 @@
+# IRSA Configuration for cert-manager
+# This patches the service account with the IAM role ARN for Route53 access
+
+{{- if and (index .Values "cert-manager" "enabled") .Values.aws.certManagerRoleArn }}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: cert-manager
+  namespace: cert-manager
+  labels:
+    app.kubernetes.io/name: cert-manager
+  annotations:
+    eks.amazonaws.com/role-arn: {{ .Values.aws.certManagerRoleArn }}
+{{- end }}

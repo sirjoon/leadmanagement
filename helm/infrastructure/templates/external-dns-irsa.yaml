@@ -1,0 +1,14 @@
+# IRSA Configuration for external-dns
+# This patches the service account with the IAM role ARN
+
+{{- if and (index .Values "external-dns" "enabled") .Values.aws.externalDnsRoleArn }}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: external-dns
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/name: external-dns
+  annotations:
+    eks.amazonaws.com/role-arn: {{ .Values.aws.externalDnsRoleArn }}
+{{- end }}

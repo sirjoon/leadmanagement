@@ -1,0 +1,71 @@
+# Let's Encrypt ClusterIssuers for cert-manager
+# Creates both staging (for testing) and production issuers
+
+{{- if index .Values "cert-manager" "enabled" }}
+---
+# Staging issuer - use for testing (higher rate limits)
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: letsencrypt-staging
+  labels:
+    app.kubernetes.io/name: cert-manager
+    app.kubernetes.io/component: cluster-issuer
+spec:
+  acme:
+    # Staging server
+    server: https://acme-staging-v02.api.letsencrypt.org/directory
+    email: {{ .Values.email }}
+    privateKeySecretRef:
+      name: letsencrypt-staging-account-key
+    solvers:
+      # HTTP-01 challenge using ingress
+      - http01:
+          ingress:
+            class: nginx
+---
+# Production issuer - use for real certificates
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: letsencrypt-prod
+  labels:
+    app.kubernetes.io/name: cert-manager
+    app.kubernetes.io/component: cluster-issuer
+spec:
+  acme:
+    # Production server
+    server: https://acme-v02.api.letsencrypt.org/directory
+    email: {{ .Values.email }}
+    privateKeySecretRef:
+      name: letsencrypt-prod-account-key
+    solvers:
+      # HTTP-01 challenge using ingress
+      - http01:
+          ingress:
+            class: nginx
+      # DNS-01 challenge for wildcard certs (using Route53)
+      - dns01:
+          route53:
+            region: {{ .Values.aws.region }}
+            # Uses IRSA - no explicit credentials needed
+        selector:
+          dnsZones:
+            - {{ .Values.domain }}
+---
+# Wildcard certificate for all tenant subdomains
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: dentacrm-wildcard-cert
+  namespace: dentacrm
+spec:
+  secretName: dentacrm-wildcard-tls
+  issuerRef:
+    name: letsencrypt-prod
+    kind: ClusterIssuer
+  commonName: "*.{{ .Values.domain }}"
+  dnsNames:
+    - {{ .Values.domain }}
+    - "*.{{ .Values.domain }}"
+{{- end }}

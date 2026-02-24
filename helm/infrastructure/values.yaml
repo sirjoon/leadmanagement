@@ -1,0 +1,141 @@
+# DentraCRM Infrastructure Values
+# NGINX Ingress, cert-manager, and external-dns for EKS
+
+# AWS Settings
+aws:
+  region: ap-south-1
+  # IAM role ARNs for IRSA (IAM Roles for Service Accounts)
+  externalDnsRoleArn: ""  # arn:aws:iam::ACCOUNT_ID:role/external-dns-role
+  certManagerRoleArn: ""  # arn:aws:iam::ACCOUNT_ID:role/cert-manager-role
+
+# Domain settings
+domain: dentacrm.in
+email: admin@dentacrm.in  # For Let's Encrypt notifications
+
+# ─────────────────────────────────────────────────────────────
+# NGINX Ingress Controller
+# ─────────────────────────────────────────────────────────────
+ingress-nginx:
+  enabled: true
+  controller:
+    replicaCount: 2
+    
+    # Use AWS NLB for better performance
+    service:
+      type: LoadBalancer
+      annotations:
+        service.beta.kubernetes.io/aws-load-balancer-type: nlb
+        service.beta.kubernetes.io/aws-load-balancer-cross-zone-load-balancing-enabled: "true"
+        service.beta.kubernetes.io/aws-load-balancer-backend-protocol: tcp
+        service.beta.kubernetes.io/aws-load-balancer-scheme: internet-facing
+    
+    # Resource limits
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+    
+    # Metrics for monitoring
+    metrics:
+      enabled: true
+      serviceMonitor:
+        enabled: false  # Enable if using Prometheus
+    
+    # Pod disruption budget
+    minAvailable: 1
+    
+    # Autoscaling
+    autoscaling:
+      enabled: true
+      minReplicas: 2
+      maxReplicas: 10
+      targetCPUUtilizationPercentage: 70
+      targetMemoryUtilizationPercentage: 80
+    
+    # Config for tenant header injection
+    config:
+      use-forwarded-headers: "true"
+      compute-full-forwarded-for: "true"
+      use-proxy-protocol: "false"
+
+# ─────────────────────────────────────────────────────────────
+# cert-manager - Automatic TLS certificates
+# ─────────────────────────────────────────────────────────────
+cert-manager:
+  enabled: true
+  installCRDs: true
+  
+  # Use IRSA for AWS permissions
+  serviceAccount:
+    create: true
+    annotations: {}  # Will be set via aws.certManagerRoleArn
+  
+  # Resource limits
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+  
+  # Webhook for certificate validation
+  webhook:
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+  
+  # CA Injector
+  cainjector:
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+
+# ─────────────────────────────────────────────────────────────
+# external-dns - Automatic Route53 management
+# ─────────────────────────────────────────────────────────────
+external-dns:
+  enabled: true
+  
+  # AWS Route53 provider
+  provider: aws
+  
+  # Use IRSA for AWS permissions
+  serviceAccount:
+    create: true
+    annotations: {}  # Will be set via aws.externalDnsRoleArn
+  
+  # Domain filter - only manage this domain
+  domainFilters:
+    - dentacrm.in
+  
+  # Route53 settings
+  aws:
+    region: ap-south-1
+    zoneType: public
+  
+  # Sync policy
+  policy: sync  # Options: sync, upsert-only
+  
+  # How often to sync
+  interval: 1m
+  
+  # Resource limits
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+  
+  # TXT record prefix for ownership
+  txtOwnerId: dentacrm-external-dns
+  
+  # Log level
+  logLevel: info
