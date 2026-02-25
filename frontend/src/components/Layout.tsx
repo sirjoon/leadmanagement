@@ -1,15 +1,16 @@
 import { Link, useLocation } from 'react-router-dom';
-import { 
-  Users, 
-  Calendar, 
-  BarChart3, 
-  Settings, 
-  LogOut, 
-  Menu, 
+import {
+  Users,
+  Calendar,
+  BarChart3,
+  Settings,
+  LogOut,
+  Menu,
   X,
   UserCircle,
   ChevronDown,
-  Building2
+  Building2,
+  FileText
 } from 'lucide-react';
 import { useState } from 'react';
 import { useAuthStore } from '../store/authStore';
@@ -30,6 +31,7 @@ const navItems = [
   { path: '/leads', label: 'Leads', icon: Users, adminOnly: false },
   { path: '/appointments', label: 'Appointments', icon: Calendar, adminOnly: false },
   { path: '/analytics', label: 'Analytics', icon: BarChart3, adminOnly: true },
+  { path: '/reports', label: 'Reports', icon: FileText, adminOnly: true },
   { path: '/users', label: 'Users', icon: UserCircle, adminOnly: true },
   { path: '/settings', label: 'Settings', icon: Settings, adminOnly: false },
 ];

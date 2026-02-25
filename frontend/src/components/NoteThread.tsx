@@ -131,9 +131,11 @@ export default function NoteThread({ leadId, notes: initialNotes }: NoteThreadPr
                   <span className="text-sm font-medium text-slate-900">
                     {note.author.name}
                   </span>
-                  <span className="text-xs text-slate-400">
-                    {note.author.role.replace('_', ' ')}
-                  </span>
+                  {note.author.role && (
+                    <span className="text-xs text-slate-400">
+                      {note.author.role.replace('_', ' ')}
+                    </span>
+                  )}
                   {note.isAdminOnly && (
                     <span className="flex items-center gap-1 rounded bg-amber-100 px-1.5 py-0.5 text-xs text-amber-700">
                       <Lock className="h-3 w-3" />

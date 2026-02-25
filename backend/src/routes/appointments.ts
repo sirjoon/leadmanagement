@@ -24,6 +24,7 @@ const updateAppointmentSchema = z.object({
 
 const appointmentFiltersSchema = z.object({
   clinicId: z.string().optional(),
+  leadId: z.string().optional(),
   status: z.nativeEnum(AppointmentStatus).optional(),
   from: z.string().datetime().optional(),
   to: z.string().datetime().optional(),
@@ -39,10 +40,17 @@ router.get('/', asyncHandler(async (req: AuthenticatedRequest, res: Response) =>
     return;
   }
 
-  const { clinicId, status, from, to } = appointmentFiltersSchema.parse(req.query);
+  const { clinicId, leadId, status, from, to } = appointmentFiltersSchema.parse(req.query);
 
-  // Build where clause
-  const where: Record<string, unknown> = {};
+  // Build where clause — scope to tenant via lead
+  const where: Record<string, unknown> = {
+    lead: { tenantId: req.tenant.id, deletedAt: null },
+  };
+
+  // Filter by leadId if provided
+  if (leadId) {
+    where.leadId = leadId;
+  }
 
   // Clinic staff can only see their clinic's appointments
   if (req.tenant.role === 'CLINIC_STAFF' && req.tenant.location) {

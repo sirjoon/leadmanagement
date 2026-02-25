@@ -1,14 +1,38 @@
 # DentraCRM API Dockerfile
 
+# ── Development stage ──────────────────────────────────────────
+FROM node:20-alpine AS development
+
+WORKDIR /app
+
+# Install OpenSSL for Prisma compatibility
+RUN apk add --no-cache openssl
+
+COPY package*.json ./
+COPY prisma ./prisma/
+
+RUN npm install
+
+# Generate Prisma client
+RUN npx prisma generate
+
+COPY . .
+
+EXPOSE 3000
+
+CMD ["npm", "run", "dev"]
+
+# ── Builder stage ──────────────────────────────────────────────
 FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Install dependencies
+RUN apk add --no-cache openssl
+
 COPY package*.json ./
 COPY prisma ./prisma/
 
-RUN npm ci
+RUN npm install
 
 # Copy source
 COPY . .
@@ -19,10 +43,12 @@ RUN npx prisma generate
 # Build TypeScript
 RUN npm run build
 
-# ─────────────────────────────────────────────────────────────
+# ── Production stage ───────────────────────────────────────────
 FROM node:20-alpine AS runner
 
 WORKDIR /app
+
+RUN apk add --no-cache openssl
 
 # Create non-root user
 RUN addgroup --system --gid 1001 nodejs

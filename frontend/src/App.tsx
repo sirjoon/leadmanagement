@@ -8,6 +8,7 @@ import AnalyticsPage from './pages/AnalyticsPage';
 import UsersPage from './pages/UsersPage';
 import AppointmentsPage from './pages/AppointmentsPage';
 import SettingsPage from './pages/SettingsPage';
+import ReportsPage from './pages/ReportsPage';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuthStore();
@@ -50,14 +51,11 @@ function App() {
                 <Route path="/appointments" element={<AppointmentsPage />} />
                 <Route path="/analytics" element={<AnalyticsPage />} />
                 <Route path="/users" element={<UsersPage />} />
+                <Route path="/reports" element={<ReportsPage />} />
                 <Route path="/settings" element={<SettingsPage />} />
-                
-                {/* Tenant-specific routes */}
-                <Route path="/:tenantId/leads" element={<LeadsPage />} />
-                <Route path="/:tenantId/leads/:id" element={<LeadDetailPage />} />
-                <Route path="/:tenantId/appointments" element={<AppointmentsPage />} />
-                <Route path="/:tenantId/analytics" element={<AnalyticsPage />} />
-                <Route path="/:tenantId/users" element={<UsersPage />} />
+
+                {/* Catch-all: redirect unknown paths to /leads */}
+                <Route path="*" element={<Navigate to="/leads" replace />} />
               </Routes>
             </Layout>
           </ProtectedRoute>

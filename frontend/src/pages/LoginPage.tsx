@@ -27,7 +27,7 @@ export default function LoginPage() {
 
     try {
       await login(email, password, tenantId);
-      navigate(`/${tenantId}/leads`);
+      navigate('/leads');
     } catch {
       // Error is handled by the store
     }

@@ -25,6 +25,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
+      target: development
     container_name: dentacrm-api
     ports:
       - "3000:3000"
@@ -36,6 +37,7 @@ services:
       DATABASE_URL_AVMSMILES: postgresql://postgres:postgres@postgres:5432/dentacrm_dev
       JWT_SECRET: dev-secret-change-in-production-minimum-64-chars-long-for-security
       JWT_EXPIRY: 24h
+      FRONTEND_URL: http://localhost:5173
     depends_on:
       postgres:
         condition: service_healthy
@@ -50,6 +52,7 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      target: development
     container_name: dentacrm-frontend
     ports:
       - "5173:5173"

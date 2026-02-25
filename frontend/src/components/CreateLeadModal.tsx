@@ -85,7 +85,7 @@ export default function CreateLeadModal({ onClose }: CreateLeadModalProps) {
         source: formData.source,
         treatmentInterest: formData.treatmentInterest || undefined,
         clinicId: formData.clinicId || undefined,
-        followUpDate: formData.followUpDate || undefined,
+        followUpDate: formData.followUpDate ? new Date(formData.followUpDate).toISOString() : undefined,
         nextAction: formData.nextAction || undefined,
       });
 

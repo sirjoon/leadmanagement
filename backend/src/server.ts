@@ -11,6 +11,7 @@ import { userRoutes } from './routes/users.js';
 import { clinicRoutes } from './routes/clinics.js';
 import { analyticsRoutes } from './routes/analytics.js';
 import { appointmentRoutes } from './routes/appointments.js';
+import { reportRoutes } from './routes/reports.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { tenantMiddleware } from './middleware/tenant.js';
 
@@ -52,6 +53,7 @@ app.use('/api/v1/users', tenantMiddleware, userRoutes);
 app.use('/api/v1/clinics', tenantMiddleware, clinicRoutes);
 app.use('/api/v1/analytics', tenantMiddleware, analyticsRoutes);
 app.use('/api/v1/appointments', tenantMiddleware, appointmentRoutes);
+app.use('/api/v1/reports', tenantMiddleware, reportRoutes);
 
 // Error handling
 app.use(errorHandler);
