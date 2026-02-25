@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Phone, MessageSquare, Calendar, MapPin, Clock, Edit2 } from 'lucide-react';
+import { ArrowLeft, MapPin, Edit2 } from 'lucide-react';
 import { useLeadStore } from '../store/leadStore';
 import { format, parseISO } from 'date-fns';
 import NoteThread from '../components/NoteThread';

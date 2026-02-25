@@ -111,7 +111,7 @@ interface LeadCardProps {
   onSelect: () => void;
 }
 
-export default function LeadCard({ lead, index, onSelect }: LeadCardProps) {
+export default function LeadCard({ lead, index, onSelect: _onSelect }: LeadCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);

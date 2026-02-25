@@ -100,7 +100,7 @@ router.post('/login', asyncHandler(async (req: Request, res: Response) => {
       email: user.email,
     },
     jwtSecret,
-    { expiresIn: process.env.JWT_EXPIRY || '24h' }
+    { expiresIn: process.env.JWT_EXPIRY || '24h' } as jwt.SignOptions
   );
 
   // Update last login

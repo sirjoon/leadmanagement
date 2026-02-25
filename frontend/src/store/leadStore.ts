@@ -57,6 +57,7 @@ export interface Lead {
   followUpDate: string | null;
   lastContactedAt: string | null;
   nextAction: string | null;
+  campaignName: string | null;
   clinicId: string | null;
   clinic: Clinic | null;
   notes: Note[];

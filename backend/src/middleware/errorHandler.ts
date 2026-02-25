@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { ZodError } from 'zod';
 import { Prisma } from '@prisma/client';
 
-interface AppError extends Error {
+interface ErrorWithStatus extends Error {
   statusCode?: number;
   isOperational?: boolean;
 }
@@ -11,7 +11,7 @@ interface AppError extends Error {
  * Global error handler middleware
  */
 export const errorHandler = (
-  err: AppError,
+  err: ErrorWithStatus,
   _req: Request,
   res: Response,
   _next: NextFunction

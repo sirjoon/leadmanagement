@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Plus, Search, MoreVertical, Mail, UserCircle, Shield, Building2 } from 'lucide-react';
+import { Plus, Search, MoreVertical, UserCircle, Shield } from 'lucide-react';
 import { api } from '../api/client';
 import { clsx } from 'clsx';
 import { format, parseISO } from 'date-fns';
@@ -31,7 +31,7 @@ export default function UsersPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [_showInviteModal, setShowInviteModal] = useState(false);
 
   useEffect(() => {
     fetchUsers();

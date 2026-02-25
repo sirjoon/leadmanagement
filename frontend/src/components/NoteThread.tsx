@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Send, Lock, User } from 'lucide-react';
+import { Send, Lock } from 'lucide-react';
 import { type Note } from '../store/leadStore';
 import { useAuthStore } from '../store/authStore';
 import { api } from '../api/client';

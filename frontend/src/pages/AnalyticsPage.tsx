@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
-import { TrendingUp, Users, Calendar, CheckCircle, ArrowUpRight, ArrowDownRight } from 'lucide-react';
+import { TrendingUp, Users, Calendar, CheckCircle, ArrowUpRight } from 'lucide-react';
 import { api } from '../api/client';
 import { clsx } from 'clsx';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Funnel, FunnelChart, LabelList } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 
 interface Summary {
   totalLeads: number;

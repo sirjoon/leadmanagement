@@ -1,48 +1,18 @@
 import { useEffect, useState } from 'react';
-import { 
-  Search, 
-  Plus, 
-  Filter, 
-  ChevronDown,
-  Phone,
-  Calendar,
-  MapPin,
-  MessageSquare,
-  MoreVertical,
+import {
+  Search,
+  Plus,
+  Filter,
   AlertCircle,
   RefreshCw
 } from 'lucide-react';
-import { useLeadStore, type Lead, type LeadStatus, type Priority } from '../store/leadStore';
+import { useLeadStore } from '../store/leadStore';
 import { useAuthStore } from '../store/authStore';
 import { clsx } from 'clsx';
-import { format, isToday, isPast, isFuture, parseISO } from 'date-fns';
 import LeadCard from '../components/LeadCard';
 import CreateLeadModal from '../components/CreateLeadModal';
 import FilterPanel from '../components/FilterPanel';
 
-// Status badge colors
-const statusColors: Record<LeadStatus, string> = {
-  NEW: 'bg-purple-100 text-purple-700',
-  ATTEMPTING: 'bg-yellow-100 text-yellow-700',
-  CONNECTED: 'bg-blue-100 text-blue-700',
-  APPOINTMENT_BOOKED: 'bg-emerald-100 text-emerald-700',
-  VISITED: 'bg-green-100 text-green-700',
-  TREATMENT_STARTED: 'bg-teal-100 text-teal-700',
-  RESCHEDULED: 'bg-orange-100 text-orange-700',
-  LOST: 'bg-red-100 text-red-700',
-  DNC: 'bg-gray-100 text-gray-700',
-  DNR: 'bg-gray-200 text-gray-800',
-};
-
-// Priority badge styles
-const priorityStyles: Record<Priority, { bg: string; text: string; icon: string }> = {
-  HOT: { bg: 'bg-red-500', text: 'text-white', icon: '🔥' },
-  WARM: { bg: 'bg-orange-400', text: 'text-white', icon: '♨️' },
-  COLD: { bg: 'bg-blue-400', text: 'text-white', icon: '🧊' },
-  NEW: { bg: 'bg-purple-500', text: 'text-white', icon: '📋' },
-  APPOINTMENT: { bg: 'bg-emerald-500', text: 'text-white', icon: '📅' },
-  VISITED: { bg: 'bg-green-500', text: 'text-white', icon: '✅' },
-};
 
 export default function LeadsPage() {
   const { 
@@ -63,7 +33,6 @@ export default function LeadsPage() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
 
   useEffect(() => {
     fetchLeads();
@@ -78,6 +47,8 @@ export default function LeadsPage() {
     fetchLeads({ search: searchQuery, page: 1 });
   };
 
+  const [, setSelectedLead] = useState<unknown>(null);
+
   const handleRefresh = () => {
     fetchLeads(filters);
     if (isAdmin) {
@@ -85,21 +56,6 @@ export default function LeadsPage() {
     }
   };
 
-  const getFollowUpStatus = (date: string | null) => {
-    if (!date) return { label: 'No follow-up', color: 'text-gray-400' };
-    
-    const followUpDate = parseISO(date);
-    if (isPast(followUpDate) && !isToday(followUpDate)) {
-      return { label: 'Overdue', color: 'text-red-600 font-semibold' };
-    }
-    if (isToday(followUpDate)) {
-      return { label: 'Due Today', color: 'text-amber-600 font-semibold' };
-    }
-    if (isFuture(followUpDate)) {
-      return { label: format(followUpDate, 'MMM d'), color: 'text-green-600' };
-    }
-    return { label: format(followUpDate, 'MMM d'), color: 'text-gray-500' };
-  };
 
   return (
     <div className="space-y-6">
