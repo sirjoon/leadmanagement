@@ -13,6 +13,7 @@ import {
   Building2,
   CalendarPlus,
   Check,
+  Trash2,
 } from 'lucide-react';
 import { type Lead, type LeadStatus, type Priority, type LeadSource, useLeadStore } from '../store/leadStore';
 import { useAuthStore } from '../store/authStore';
@@ -133,7 +134,9 @@ export default function LeadCard({ lead, index, onSelect: _onSelect }: LeadCardP
     notes: string | null;
     clinic: { name: string };
   }>>([]);
-  const { updateLead, assignLead, fetchLeads } = useLeadStore();
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const { updateLead, assignLead, deleteLead, fetchLeads } = useLeadStore();
   const { user } = useAuthStore();
   const isAdmin = user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN';
 
@@ -234,6 +237,17 @@ export default function LeadCard({ lead, index, onSelect: _onSelect }: LeadCardP
   const handleStartEdit = () => {
     setIsEditing(true);
     setEditError(null);
+  };
+
+  const handleDeleteLead = async () => {
+    setIsDeleting(true);
+    try {
+      await deleteLead(lead.id);
+    } catch {
+      setEditError('Failed to delete lead');
+      setIsDeleting(false);
+      setShowDeleteConfirm(false);
+    }
   };
 
   const handleCancelEdit = () => {
@@ -680,14 +694,48 @@ export default function LeadCard({ lead, index, onSelect: _onSelect }: LeadCardP
             <div className="p-4">
               <div className="mb-3 flex items-center justify-between">
                 <p className="text-xs font-medium uppercase tracking-wide text-slate-400">Lead Details</p>
-                <button
-                  onClick={handleStartEdit}
-                  className="flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-50 hover:border-dental-300 hover:text-dental-600"
-                >
-                  <Edit2 className="h-3.5 w-3.5" />
-                  Edit
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={handleStartEdit}
+                    className="flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-50 hover:border-dental-300 hover:text-dental-600"
+                  >
+                    <Edit2 className="h-3.5 w-3.5" />
+                    Edit
+                  </button>
+                  {isAdmin && (
+                    <button
+                      onClick={() => setShowDeleteConfirm(true)}
+                      className="flex items-center gap-1.5 rounded-lg border border-red-200 px-3 py-1.5 text-xs font-medium text-red-500 transition-colors hover:bg-red-50 hover:border-red-300 hover:text-red-600"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                      Delete
+                    </button>
+                  )}
+                </div>
               </div>
+
+              {/* Delete confirmation */}
+              {showDeleteConfirm && (
+                <div className="mb-3 rounded-lg border border-red-200 bg-red-50 p-3">
+                  <p className="text-sm font-medium text-red-700">Delete this lead?</p>
+                  <p className="mt-1 text-xs text-red-500">This will remove "{lead.name}" from the system.</p>
+                  <div className="mt-2 flex items-center gap-2">
+                    <button
+                      onClick={handleDeleteLead}
+                      disabled={isDeleting}
+                      className="rounded-lg bg-red-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-700 disabled:opacity-50"
+                    >
+                      {isDeleting ? 'Deleting...' : 'Yes, Delete'}
+                    </button>
+                    <button
+                      onClick={() => setShowDeleteConfirm(false)}
+                      className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
 
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 <div>
