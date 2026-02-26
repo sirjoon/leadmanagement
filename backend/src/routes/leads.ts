@@ -1,6 +1,13 @@
 import { Router, Response } from 'express';
 import { z } from 'zod';
-import { AuthenticatedRequest, requireRole } from '../middleware/tenant.js';
+import { 
+  AuthenticatedRequest, 
+  requireRole, 
+  STATUSES_REQUIRING_FOLLOWUP,
+  isAdminUser,
+  isLeadUser,
+  isClinicStaff
+} from '../middleware/tenant.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
 import { LeadStatus, Priority, LeadSource } from '@prisma/client';
 
@@ -12,9 +19,11 @@ const createLeadSchema = z.object({
   phone: z.string().min(10),
   email: z.string().email().optional(),
   age: z.number().int().positive().nullable().optional(),
+  patientLocation: z.string().optional(),
   clinicId: z.string().optional(),
   source: z.nativeEnum(LeadSource).optional(),
   treatmentInterest: z.string().optional(),
+  enquiryDate: z.string().datetime().optional(),
   followUpDate: z.string().datetime().nullable().optional(),
   nextAction: z.string().optional(),
   adSetName: z.string().optional(),
@@ -27,11 +36,13 @@ const updateLeadSchema = z.object({
   phone: z.string().min(10).optional(),
   email: z.string().email().optional(),
   age: z.number().int().positive().nullable().optional(),
+  patientLocation: z.string().nullable().optional(),
   clinicId: z.string().nullable().optional(),
   status: z.nativeEnum(LeadStatus).optional(),
   priority: z.nativeEnum(Priority).optional(),
   source: z.nativeEnum(LeadSource).optional(),
   treatmentInterest: z.string().optional(),
+  enquiryDate: z.string().datetime().optional(),
   followUpDate: z.string().datetime().nullable().optional(),
   lastContactedAt: z.string().datetime().optional(),
   nextAction: z.string().optional(),
@@ -47,17 +58,32 @@ const leadFiltersSchema = z.object({
   followUpTo: z.string().datetime().optional(),
   page: z.coerce.number().int().positive().default(1),
   limit: z.coerce.number().int().positive().max(100).default(20),
-  sortBy: z.enum(['createdAt', 'followUpDate', 'updatedAt', 'name']).default('createdAt'),
+  sortBy: z.enum(['createdAt', 'followUpDate', 'updatedAt', 'name', 'enquiryDate']).default('createdAt'),
   sortOrder: z.enum(['asc', 'desc']).default('desc'),
 });
 
 /**
  * GET /leads
  * List leads with filtering, pagination, and role-based access
+ * 
+ * Role-based access:
+ * - ADMIN/SUPER_ADMIN: Can view all leads across all clinics
+ * - LEAD_USER: Can only view leads assigned to them
+ * - CLINIC_STAFF: No access to leads (appointment-only)
  */
 router.get('/', asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   if (!req.tenant || !req.db) {
     res.status(401).json({ error: 'Unauthorized' });
+    return;
+  }
+
+  // CLINIC_STAFF cannot access leads (User Story C4)
+  if (isClinicStaff(req.tenant.role)) {
+    res.status(403).json({ 
+      error: 'Access denied',
+      message: 'Clinic staff do not have access to lead management. Please use the Appointments section.',
+      code: 'CLINIC_STAFF_NO_LEAD_ACCESS'
+    });
     return;
   }
 
@@ -70,18 +96,9 @@ router.get('/', asyncHandler(async (req: AuthenticatedRequest, res: Response) =>
     deletedAt: null,
   };
 
-  // Clinic staff can only see their clinic's leads
-  if (req.tenant.role === 'CLINIC_STAFF' && req.tenant.location) {
-    // Get clinic ID from slug
-    const clinic = await req.db.clinic.findFirst({
-      where: { tenantId: req.tenant.id, slug: req.tenant.location },
-    });
-    if (clinic) {
-      where.clinicId = clinic.id;
-    }
-    
-    // Clinic staff cannot see DNC/DNR leads
-    where.status = { notIn: ['DNC', 'DNR'] };
+  // LEAD_USER can only see assigned leads (User Story L1)
+  if (isLeadUser(req.tenant.role)) {
+    where.assignedUserId = req.tenant.userId;
   }
 
   // Apply filters
@@ -91,7 +108,7 @@ router.get('/', asyncHandler(async (req: AuthenticatedRequest, res: Response) =>
   if (filterCriteria.priority) {
     where.priority = filterCriteria.priority;
   }
-  if (filterCriteria.clinicId && req.tenant.role !== 'CLINIC_STAFF') {
+  if (filterCriteria.clinicId && isAdminUser(req.tenant.role)) {
     where.clinicId = filterCriteria.clinicId;
   }
   if (filterCriteria.source) {
@@ -115,14 +132,17 @@ router.get('/', asyncHandler(async (req: AuthenticatedRequest, res: Response) =>
   const total = await req.db.lead.count({ where });
 
   // Get leads with pagination
+  // Include assignedUser for Admin tracking (User Story A2)
   const leads = await req.db.lead.findMany({
     where,
     include: {
       clinic: {
         select: { id: true, name: true, slug: true },
       },
+      assignedUser: isAdminUser(req.tenant.role) ? {
+        select: { id: true, name: true, email: true },
+      } : false,
       notes: {
-        where: req.tenant.role === 'CLINIC_STAFF' ? { isAdminOnly: false } : {},
         orderBy: { createdAt: 'desc' },
         take: 3,
         include: {
@@ -145,6 +165,13 @@ router.get('/', asyncHandler(async (req: AuthenticatedRequest, res: Response) =>
       limit,
       total,
       totalPages: Math.ceil(total / limit),
+    },
+    // Include role metadata for frontend
+    roleInfo: {
+      role: req.tenant.role,
+      canAccessAnalytics: isAdminUser(req.tenant.role),
+      canManageUsers: isAdminUser(req.tenant.role),
+      canAssignLeads: isAdminUser(req.tenant.role),
     },
   });
 }));
@@ -180,10 +207,25 @@ router.get('/tbd', requireRole('ADMIN', 'SUPER_ADMIN'), asyncHandler(async (req:
 /**
  * GET /leads/:id
  * Get single lead details
+ * 
+ * Role-based access:
+ * - ADMIN: Can view all leads with full status history (User Story A2)
+ * - LEAD_USER: Can view assigned leads only
+ * - CLINIC_STAFF: No access to leads
  */
 router.get('/:id', asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   if (!req.tenant || !req.db) {
     res.status(401).json({ error: 'Unauthorized' });
+    return;
+  }
+
+  // CLINIC_STAFF cannot access leads (User Story C4)
+  if (isClinicStaff(req.tenant.role)) {
+    res.status(403).json({ 
+      error: 'Access denied',
+      message: 'Clinic staff do not have access to lead details.',
+      code: 'CLINIC_STAFF_NO_LEAD_ACCESS'
+    });
     return;
   }
 
@@ -195,17 +237,20 @@ router.get('/:id', asyncHandler(async (req: AuthenticatedRequest, res: Response)
     },
     include: {
       clinic: true,
+      assignedUser: {
+        select: { id: true, name: true, email: true },
+      },
       notes: {
-        where: req.tenant.role === 'CLINIC_STAFF' ? { isAdminOnly: false } : {},
         orderBy: { createdAt: 'desc' },
         include: {
           author: { select: { id: true, name: true, role: true } },
         },
       },
-      statusHistory: {
+      // Status history visible only to Admin (User Story A2)
+      statusHistory: isAdminUser(req.tenant.role) ? {
         orderBy: { createdAt: 'desc' },
-        take: 10,
-      },
+        take: 50,
+      } : false,
       appointments: {
         orderBy: { scheduledAt: 'desc' },
       },
@@ -213,28 +258,40 @@ router.get('/:id', asyncHandler(async (req: AuthenticatedRequest, res: Response)
   });
 
   if (!lead) {
-    res.status(404).json({ error: 'Lead not found' });
+    res.status(404).json({ 
+      error: 'Lead not found',
+      message: 'The requested lead does not exist or has been deleted.',
+      code: 'LEAD_NOT_FOUND'
+    });
     return;
   }
 
-  // Clinic staff access check
-  if (req.tenant.role === 'CLINIC_STAFF' && req.tenant.location) {
-    const clinic = await req.db.clinic.findFirst({
-      where: { tenantId: req.tenant.id, slug: req.tenant.location },
-    });
-    if (clinic && lead.clinicId !== clinic.id) {
-      res.status(403).json({ error: 'Access denied' });
-      return;
-    }
-    
-    // Hide DNC/DNR from clinic staff
-    if (lead.status === 'DNC' || lead.status === 'DNR') {
-      res.status(403).json({ error: 'Access denied' });
+  // LEAD_USER access check (User Story L1)
+  if (isLeadUser(req.tenant.role)) {
+    if (lead.assignedUserId !== req.tenant.userId) {
+      res.status(403).json({ 
+        error: 'Access denied',
+        message: 'You can only view leads assigned to you.',
+        code: 'NOT_ASSIGNED_LEAD'
+      });
       return;
     }
   }
 
-  res.json({ lead });
+  // Include role-specific metadata
+  const roleMetadata = {
+    canEdit: isAdminUser(req.tenant.role) || 
+             (isLeadUser(req.tenant.role) && lead.assignedUserId === req.tenant.userId),
+    canViewStatusHistory: isAdminUser(req.tenant.role),
+    canAssignLead: isAdminUser(req.tenant.role),
+    canDeleteLead: isAdminUser(req.tenant.role),
+    isLastContactReadOnly: isLeadUser(req.tenant.role), // User Story L4
+  };
+
+  res.json({ 
+    lead,
+    roleMetadata,
+  });
 }));
 
 /**
@@ -263,6 +320,7 @@ router.post('/', asyncHandler(async (req: AuthenticatedRequest, res: Response) =
       ...data,
       tenantId: req.tenant.id,
       clinicId,
+      enquiryDate: data.enquiryDate ? new Date(data.enquiryDate) : new Date(),
       followUpDate: data.followUpDate ? new Date(data.followUpDate) : null,
     },
     include: {
@@ -276,10 +334,25 @@ router.post('/', asyncHandler(async (req: AuthenticatedRequest, res: Response) =
 /**
  * PATCH /leads/:id
  * Update a lead
+ * 
+ * Role-based restrictions:
+ * - ADMIN: Full access to all fields
+ * - LEAD_USER: Can update assigned leads only, mandatory follow-up for status changes
+ * - CLINIC_STAFF: No access to leads
  */
 router.patch('/:id', asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   if (!req.tenant || !req.db) {
     res.status(401).json({ error: 'Unauthorized' });
+    return;
+  }
+
+  // CLINIC_STAFF cannot access leads (User Story C4)
+  if (isClinicStaff(req.tenant.role)) {
+    res.status(403).json({ 
+      error: 'Access denied',
+      message: 'Clinic staff do not have access to lead management.',
+      code: 'CLINIC_STAFF_NO_LEAD_ACCESS'
+    });
     return;
   }
 
@@ -295,34 +368,80 @@ router.patch('/:id', asyncHandler(async (req: AuthenticatedRequest, res: Respons
   });
 
   if (!existingLead) {
-    res.status(404).json({ error: 'Lead not found' });
+    res.status(404).json({ 
+      error: 'Lead not found',
+      message: 'The requested lead does not exist or has been deleted.',
+      code: 'LEAD_NOT_FOUND'
+    });
     return;
   }
 
-  // Clinic staff access check
-  if (req.tenant.role === 'CLINIC_STAFF' && req.tenant.location) {
-    const clinic = await req.db.clinic.findFirst({
-      where: { tenantId: req.tenant.id, slug: req.tenant.location },
-    });
-    if (clinic && existingLead.clinicId !== clinic.id) {
-      res.status(403).json({ error: 'Access denied' });
+  // LEAD_USER access check (User Story L1)
+  if (isLeadUser(req.tenant.role)) {
+    // Lead users can only update their assigned leads
+    if (existingLead.assignedUserId !== req.tenant.userId) {
+      res.status(403).json({ 
+        error: 'Access denied',
+        message: 'You can only update leads assigned to you.',
+        code: 'NOT_ASSIGNED_LEAD'
+      });
       return;
     }
     
-    // Clinic staff cannot change status to DNC/DNR
-    if (data.status === 'DNC' || data.status === 'DNR') {
-      res.status(403).json({ error: 'Admin access required for this status' });
-      return;
-    }
-    
-    // Clinic staff cannot reassign leads
+    // Lead users cannot reassign leads (User Story L1)
     if (data.clinicId !== undefined) {
-      res.status(403).json({ error: 'Admin access required to reassign leads' });
+      res.status(403).json({ 
+        error: 'Permission denied',
+        message: 'Only administrators can reassign leads to different clinics.',
+        code: 'REASSIGN_NOT_ALLOWED'
+      });
+      return;
+    }
+
+    // Lead users cannot change to DNC/DNR statuses
+    if (data.status === 'DNC' || data.status === 'DNR') {
+      res.status(403).json({ 
+        error: 'Permission denied',
+        message: 'Only administrators can set DNC/DNR status.',
+        code: 'ADMIN_STATUS_REQUIRED'
+      });
       return;
     }
   }
 
-  // Record status change if status is being updated
+  // Mandatory follow-up validation for status changes (User Story L2)
+  if (data.status && data.status !== existingLead.status) {
+    // Check if new status requires follow-up (excluding ATTEMPTING - User Story L3)
+    if (STATUSES_REQUIRING_FOLLOWUP.includes(data.status)) {
+      const followUpDate = data.followUpDate;
+      
+      if (!followUpDate) {
+        res.status(400).json({
+          error: 'Follow-up date required',
+          message: `Status "${data.status}" requires a follow-up date. Please set a follow-up date before saving.`,
+          code: 'FOLLOWUP_REQUIRED',
+          field: 'followUpDate',
+          status: data.status,
+        });
+        return;
+      }
+
+      // Validate follow-up date is in the future
+      const followUp = new Date(followUpDate);
+      const now = new Date();
+      if (followUp <= now) {
+        res.status(400).json({
+          error: 'Invalid follow-up date',
+          message: 'Follow-up date must be in the future.',
+          code: 'FOLLOWUP_MUST_BE_FUTURE',
+          field: 'followUpDate',
+        });
+        return;
+      }
+    }
+  }
+
+  // Record status change if status is being updated (User Story A2 - tracking)
   if (data.status && data.status !== existingLead.status) {
     await req.db.leadStatusHistory.create({
       data: {
@@ -330,27 +449,44 @@ router.patch('/:id', asyncHandler(async (req: AuthenticatedRequest, res: Respons
         fromStatus: existingLead.status,
         toStatus: data.status,
         changedBy: req.tenant.userId,
+        reason: data.nextAction || `Status changed to ${data.status}`,
       },
     });
   }
 
+  // Auto-update lastContactedAt when status changes or note is implied
+  const updateData: Record<string, unknown> = {
+    ...data,
+    enquiryDate: data.enquiryDate ? new Date(data.enquiryDate) : undefined,
+    followUpDate: data.followUpDate === null 
+      ? null 
+      : data.followUpDate 
+        ? new Date(data.followUpDate) 
+        : undefined,
+    lastContactedAt: data.lastContactedAt 
+      ? new Date(data.lastContactedAt) 
+      : data.status && data.status !== existingLead.status
+        ? new Date() // Auto-update on status change (User Story A2)
+        : undefined,
+  };
+
   const lead = await req.db.lead.update({
     where: { id: req.params.id },
-    data: {
-      ...data,
-      followUpDate: data.followUpDate === null 
-        ? null 
-        : data.followUpDate 
-          ? new Date(data.followUpDate) 
-          : undefined,
-      lastContactedAt: data.lastContactedAt ? new Date(data.lastContactedAt) : undefined,
-    },
+    data: updateData,
     include: {
       clinic: true,
+      assignedUser: isAdminUser(req.tenant.role) ? {
+        select: { id: true, name: true, email: true },
+      } : false,
     },
   });
 
-  res.json({ lead });
+  res.json({ 
+    lead,
+    message: data.status && data.status !== existingLead.status 
+      ? `Lead status updated to ${data.status}` 
+      : 'Lead updated successfully',
+  });
 }));
 
 /**
@@ -371,17 +507,88 @@ router.post('/:id/assign', requireRole('ADMIN', 'SUPER_ADMIN'), asyncHandler(asy
   });
 
   if (!clinic) {
-    res.status(404).json({ error: 'Clinic not found' });
+    res.status(404).json({ 
+      error: 'Clinic not found',
+      message: 'The specified clinic does not exist.',
+      code: 'CLINIC_NOT_FOUND'
+    });
     return;
   }
 
   const lead = await req.db.lead.update({
     where: { id: req.params.id },
     data: { clinicId },
-    include: { clinic: true },
+    include: { 
+      clinic: true,
+      assignedUser: {
+        select: { id: true, name: true, email: true },
+      },
+    },
   });
 
-  res.json({ lead });
+  res.json({ 
+    lead,
+    message: `Lead assigned to ${clinic.name}`,
+  });
+}));
+
+/**
+ * POST /leads/:id/assign-user
+ * Assign lead to a Lead User (Admin only)
+ * User Story A1 - Admin can manage lead assignments
+ */
+router.post('/:id/assign-user', requireRole('ADMIN', 'SUPER_ADMIN'), asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  if (!req.tenant || !req.db) {
+    res.status(401).json({ error: 'Unauthorized' });
+    return;
+  }
+
+  const { userId } = z.object({ userId: z.string().nullable() }).parse(req.body);
+
+  // Verify user exists and is a LEAD_USER
+  if (userId) {
+    const user = await req.db.user.findFirst({
+      where: { 
+        id: userId, 
+        tenantId: req.tenant.id,
+        isActive: true,
+      },
+    });
+
+    if (!user) {
+      res.status(404).json({ 
+        error: 'User not found',
+        message: 'The specified user does not exist or is inactive.',
+        code: 'USER_NOT_FOUND'
+      });
+      return;
+    }
+
+    if (user.role !== 'LEAD_USER' && user.role !== 'ADMIN') {
+      res.status(400).json({ 
+        error: 'Invalid user role',
+        message: 'Leads can only be assigned to Lead Users or Admins.',
+        code: 'INVALID_USER_ROLE'
+      });
+      return;
+    }
+  }
+
+  const lead = await req.db.lead.update({
+    where: { id: req.params.id },
+    data: { assignedUserId: userId },
+    include: { 
+      clinic: true,
+      assignedUser: {
+        select: { id: true, name: true, email: true },
+      },
+    },
+  });
+
+  res.json({ 
+    lead,
+    message: userId ? `Lead assigned to ${lead.assignedUser?.name}` : 'Lead unassigned',
+  });
 }));
 
 /**

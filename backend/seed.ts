@@ -3,7 +3,7 @@
  * Seeds the database with initial data for development
  */
 
-import { PrismaClient, Role, LeadStatus, Priority, LeadSource, AppointmentStatus } from '../backend/node_modules/@prisma/client';
+import { PrismaClient, Role, LeadStatus, Priority, LeadSource } from '@prisma/client';
 import bcrypt from 'bcrypt';
 
 const prisma = new PrismaClient();
@@ -117,15 +117,6 @@ async function main() {
 
   // Create sample leads
   console.log('📋 Creating sample leads...');
-  const locations = [
-    'Ganapathy, Coimbatore',
-    'RS Puram, Coimbatore',
-    'Saravanampatti, Coimbatore',
-    'Vadavalli, Coimbatore',
-    'Singanallur, Coimbatore',
-    'Peelamedu, Coimbatore',
-  ];
-  
   const sampleLeads = [
     { name: 'Priya Sharma', phone: '9876543210', status: LeadStatus.NEW, priority: Priority.HOT, source: LeadSource.META_ADS, treatmentInterest: 'braces' },
     { name: 'Rahul Kumar', phone: '9876543211', status: LeadStatus.ATTEMPTING, priority: Priority.WARM, source: LeadSource.GOOGLE_ADS, treatmentInterest: 'aligners' },
@@ -139,12 +130,11 @@ async function main() {
     { name: 'Karthik Rajan', phone: '9876543219', status: LeadStatus.NEW, priority: Priority.HOT, source: LeadSource.META_ADS, treatmentInterest: 'aligners' },
   ];
 
-  const createdLeads = [];
   for (let i = 0; i < sampleLeads.length; i++) {
     const lead = sampleLeads[i];
     const clinic = createdClinics[i % createdClinics.length];
     
-    const createdLead = await prisma.lead.create({
+    await prisma.lead.create({
       data: {
         ...lead,
         tenantId: TENANT_ID,
@@ -152,12 +142,9 @@ async function main() {
         assignedUserId: i < 5 ? leadUser.id : null, // Assign first 5 leads to lead user
         email: `${lead.name.toLowerCase().replace(' ', '.')}@gmail.com`,
         age: 25 + (i % 30),
-        patientLocation: locations[i % locations.length],
-        enquiryDate: new Date(Date.now() - (i * 2) * 24 * 60 * 60 * 1000), // Staggered enquiry dates
         followUpDate: new Date(Date.now() + (i - 3) * 24 * 60 * 60 * 1000), // Some overdue, some upcoming
       },
     });
-    createdLeads.push(createdLead);
   }
 
   // Create some notes
@@ -173,48 +160,6 @@ async function main() {
         type: 'CALL_NOTE',
       },
     });
-  }
-
-  // Create sample appointments for today (for Clinic Staff dashboard)
-  console.log('📅 Creating sample appointments for today...');
-  const ganapathyClinic = createdClinics.find(c => c.slug === 'ganapathy');
-  
-  if (ganapathyClinic) {
-    const today = new Date();
-    const appointmentTimes = [
-      { hour: 9, minute: 0 },
-      { hour: 10, minute: 30 },
-      { hour: 11, minute: 0 },
-      { hour: 14, minute: 0 },
-      { hour: 15, minute: 30 },
-      { hour: 16, minute: 0 },
-    ];
-
-    const statuses: AppointmentStatus[] = [
-      AppointmentStatus.SCHEDULED,
-      AppointmentStatus.CONFIRMED,
-      AppointmentStatus.SCHEDULED,
-      AppointmentStatus.CONFIRMED,
-      AppointmentStatus.SCHEDULED,
-      AppointmentStatus.RESCHEDULED,
-    ];
-
-    for (let i = 0; i < Math.min(createdLeads.length, appointmentTimes.length); i++) {
-      const lead = createdLeads[i];
-      const time = appointmentTimes[i];
-      const scheduledAt = new Date(today.getFullYear(), today.getMonth(), today.getDate(), time.hour, time.minute);
-
-      await prisma.appointment.create({
-        data: {
-          leadId: lead.id,
-          clinicId: ganapathyClinic.id,
-          scheduledAt,
-          duration: 30,
-          status: statuses[i],
-          notes: i === 5 ? 'Rescheduled from yesterday - patient had conflict' : null,
-        },
-      });
-    }
   }
 
   console.log('✅ Seeding complete!');

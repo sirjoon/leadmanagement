@@ -3,6 +3,8 @@ import { Calendar, Clock, MapPin, Phone, ChevronLeft, ChevronRight } from 'lucid
 import { api } from '../api/client';
 import { clsx } from 'clsx';
 import { format, parseISO, startOfWeek, endOfWeek, addWeeks, subWeeks, eachDayOfInterval, isSameDay } from 'date-fns';
+import { useAuthStore, isClinicStaffRole } from '../store/authStore';
+import StaffDashboard from '../components/StaffDashboard';
 
 interface Appointment {
   id: string;
@@ -33,6 +35,18 @@ const statusColors: Record<string, string> = {
 };
 
 export default function AppointmentsPage() {
+  const { user } = useAuthStore();
+  const isStaff = user ? isClinicStaffRole(user.role) : false;
+
+  // For clinic staff, show the specialized StaffDashboard
+  if (isStaff) {
+    return <StaffDashboard />;
+  }
+
+  return <AppointmentsCalendar />;
+}
+
+function AppointmentsCalendar() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [currentWeekStart, setCurrentWeekStart] = useState(startOfWeek(new Date(), { weekStartsOn: 1 }));

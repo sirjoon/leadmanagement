@@ -1,6 +1,6 @@
 import { Router, Response } from 'express';
 import { z } from 'zod';
-import { AuthenticatedRequest, requireRole } from '../middleware/tenant.js';
+import { AuthenticatedRequest, requireRole, isAdminUser, isClinicStaff } from '../middleware/tenant.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
 import { AppointmentStatus } from '@prisma/client';
 
@@ -20,6 +20,7 @@ const updateAppointmentSchema = z.object({
   duration: z.number().int().positive().optional(),
   status: z.nativeEnum(AppointmentStatus).optional(),
   notes: z.string().optional(),
+  rescheduleReason: z.string().optional(), // Optional reason for rescheduling (User Story C3)
 });
 
 const appointmentFiltersSchema = z.object({
@@ -31,8 +32,92 @@ const appointmentFiltersSchema = z.object({
 });
 
 /**
+ * GET /appointments/today
+ * Get today's appointments - optimized for Clinic Staff dashboard
+ */
+router.get('/today', asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  if (!req.tenant || !req.db) {
+    res.status(401).json({ error: 'Unauthorized' });
+    return;
+  }
+
+  // Get start and end of today
+  const today = new Date();
+  const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0);
+  const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
+
+  // Build where clause — scope to tenant via lead
+  const where: Record<string, unknown> = {
+    lead: { tenantId: req.tenant.id, deletedAt: null },
+    scheduledAt: {
+      gte: startOfDay,
+      lte: endOfDay,
+    },
+  };
+
+  // CLINIC_STAFF can only see their clinic's appointments
+  if (isClinicStaff(req.tenant.role) && req.tenant.location) {
+    const clinic = await req.db.clinic.findFirst({
+      where: { tenantId: req.tenant.id, slug: req.tenant.location },
+    });
+    if (clinic) {
+      where.clinicId = clinic.id;
+    } else {
+      res.json({ appointments: [], stats: { total: 0, completed: 0, pending: 0 } });
+      return;
+    }
+  }
+
+  const appointments = await req.db.appointment.findMany({
+    where,
+    include: {
+      lead: {
+        select: {
+          id: true,
+          name: true,
+          phone: true,
+          email: true,
+          age: true,
+          patientLocation: true,
+          treatmentInterest: true,
+          enquiryDate: true,
+          source: true,
+        },
+      },
+      clinic: {
+        select: { id: true, name: true, slug: true },
+      },
+    },
+    orderBy: { scheduledAt: 'asc' },
+  });
+
+  // Calculate stats
+  const stats = {
+    total: appointments.length,
+    completed: appointments.filter(a => a.status === 'COMPLETED').length,
+    confirmed: appointments.filter(a => a.status === 'CONFIRMED').length,
+    scheduled: appointments.filter(a => a.status === 'SCHEDULED').length,
+    noShow: appointments.filter(a => a.status === 'NO_SHOW').length,
+    dnr: appointments.filter(a => a.status === 'DNR').length,
+    twc: appointments.filter(a => a.status === 'TWC').length,
+    rescheduled: appointments.filter(a => a.status === 'RESCHEDULED').length,
+  };
+
+  res.json({ 
+    appointments,
+    stats,
+    date: today.toISOString().split('T')[0],
+  });
+}));
+
+/**
  * GET /appointments
  * List appointments with filtering
+ * 
+ * Role-based access (User Story C1, C2):
+ * - ADMIN: Can view all appointments across all clinics
+ * - LEAD_USER: Can view appointments for their assigned leads
+ * - CLINIC_STAFF: Can only view appointments for their clinic (patient data only)
  */
 router.get('/', asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   if (!req.tenant || !req.db) {
@@ -52,13 +137,17 @@ router.get('/', asyncHandler(async (req: AuthenticatedRequest, res: Response) =>
     where.leadId = leadId;
   }
 
-  // Clinic staff can only see their clinic's appointments
-  if (req.tenant.role === 'CLINIC_STAFF' && req.tenant.location) {
+  // CLINIC_STAFF can only see their clinic's appointments (User Story C1, C2)
+  if (isClinicStaff(req.tenant.role) && req.tenant.location) {
     const clinic = await req.db.clinic.findFirst({
       where: { tenantId: req.tenant.id, slug: req.tenant.location },
     });
     if (clinic) {
       where.clinicId = clinic.id;
+    } else {
+      // Clinic not found - return empty
+      res.json({ appointments: [] });
+      return;
     }
   } else if (clinicId) {
     where.clinicId = clinicId;
@@ -78,6 +167,7 @@ router.get('/', asyncHandler(async (req: AuthenticatedRequest, res: Response) =>
   const appointments = await req.db.appointment.findMany({
     where,
     include: {
+      // For clinic staff, only show patient info, not lead management data (User Story C4)
       lead: {
         select: {
           id: true,
@@ -85,6 +175,13 @@ router.get('/', asyncHandler(async (req: AuthenticatedRequest, res: Response) =>
           phone: true,
           email: true,
           treatmentInterest: true,
+          // Hide lead management fields from clinic staff
+          ...(isClinicStaff(req.tenant.role) ? {} : {
+            status: true,
+            priority: true,
+            followUpDate: true,
+            lastContactedAt: true,
+          }),
         },
       },
       clinic: {
@@ -94,7 +191,15 @@ router.get('/', asyncHandler(async (req: AuthenticatedRequest, res: Response) =>
     orderBy: { scheduledAt: 'asc' },
   });
 
-  res.json({ appointments });
+  res.json({ 
+    appointments,
+    roleInfo: {
+      role: req.tenant.role,
+      canCreateAppointment: isAdminUser(req.tenant.role) || req.tenant.role === 'LEAD_USER',
+      canReschedule: true, // All roles can reschedule (User Story C3)
+      canViewLeadDetails: !isClinicStaff(req.tenant.role),
+    },
+  });
 }));
 
 /**
@@ -137,10 +242,24 @@ router.get('/:id', asyncHandler(async (req: AuthenticatedRequest, res: Response)
 /**
  * POST /appointments
  * Book a new appointment
+ * 
+ * User Story C4: Clinic staff cannot create leads or book appointments that affect lead status
+ * - Only Admin and Lead Users can book appointments
  */
 router.post('/', asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   if (!req.tenant || !req.db) {
     res.status(401).json({ error: 'Unauthorized' });
+    return;
+  }
+
+  // Clinic staff cannot create appointments (User Story C4)
+  // They can only view and reschedule existing appointments
+  if (isClinicStaff(req.tenant.role)) {
+    res.status(403).json({ 
+      error: 'Permission denied',
+      message: 'Clinic staff cannot book new appointments. Please contact a lead manager.',
+      code: 'STAFF_CANNOT_CREATE_APPOINTMENT'
+    });
     return;
   }
 
@@ -156,7 +275,11 @@ router.post('/', asyncHandler(async (req: AuthenticatedRequest, res: Response) =
   });
 
   if (!lead) {
-    res.status(404).json({ error: 'Lead not found' });
+    res.status(404).json({ 
+      error: 'Lead not found',
+      message: 'The specified lead does not exist or has been deleted.',
+      code: 'LEAD_NOT_FOUND'
+    });
     return;
   }
 
@@ -169,19 +292,12 @@ router.post('/', asyncHandler(async (req: AuthenticatedRequest, res: Response) =
   });
 
   if (!clinic) {
-    res.status(404).json({ error: 'Clinic not found' });
-    return;
-  }
-
-  // Clinic staff can only book for their clinic
-  if (req.tenant.role === 'CLINIC_STAFF' && req.tenant.location) {
-    const userClinic = await req.db.clinic.findFirst({
-      where: { tenantId: req.tenant.id, slug: req.tenant.location },
+    res.status(404).json({ 
+      error: 'Clinic not found',
+      message: 'The specified clinic does not exist.',
+      code: 'CLINIC_NOT_FOUND'
     });
-    if (userClinic && data.clinicId !== userClinic.id) {
-      res.status(403).json({ error: 'Can only book appointments for your clinic' });
-      return;
-    }
+    return;
   }
 
   // Create appointment
@@ -199,6 +315,8 @@ router.post('/', asyncHandler(async (req: AuthenticatedRequest, res: Response) =
           id: true,
           name: true,
           phone: true,
+          email: true,
+          treatmentInterest: true,
         },
       },
       clinic: {
@@ -218,7 +336,7 @@ router.post('/', asyncHandler(async (req: AuthenticatedRequest, res: Response) =
       },
     });
 
-    // Record status change
+    // Record status change (User Story A2 - tracking)
     await req.db.leadStatusHistory.create({
       data: {
         leadId: lead.id,
@@ -230,12 +348,21 @@ router.post('/', asyncHandler(async (req: AuthenticatedRequest, res: Response) =
     });
   }
 
-  res.status(201).json({ appointment });
+  res.status(201).json({ 
+    appointment,
+    message: 'Appointment booked successfully',
+    leadStatusUpdated: earlyStatuses.includes(lead.status),
+  });
 }));
 
 /**
  * PATCH /appointments/:id
  * Update/reschedule an appointment
+ * 
+ * User Story C3: Clinic staff can reschedule appointments
+ * - Rescheduled appointments shown in different color (frontend)
+ * - Rescheduling does NOT create or update leads
+ * - Reschedule reason optional
  */
 router.patch('/:id', asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   if (!req.tenant || !req.db) {
@@ -248,36 +375,98 @@ router.patch('/:id', asyncHandler(async (req: AuthenticatedRequest, res: Respons
   // Find existing appointment
   const existingAppointment = await req.db.appointment.findUnique({
     where: { id: req.params.id },
+    include: {
+      lead: { select: { id: true, status: true } },
+    },
   });
 
   if (!existingAppointment) {
-    res.status(404).json({ error: 'Appointment not found' });
+    res.status(404).json({ 
+      error: 'Appointment not found',
+      message: 'The requested appointment does not exist.',
+      code: 'APPOINTMENT_NOT_FOUND'
+    });
     return;
   }
 
-  // Clinic staff access check
-  if (req.tenant.role === 'CLINIC_STAFF' && req.tenant.location) {
+  // Clinic staff access check (User Story C2)
+  if (isClinicStaff(req.tenant.role) && req.tenant.location) {
     const clinic = await req.db.clinic.findFirst({
       where: { tenantId: req.tenant.id, slug: req.tenant.location },
     });
     if (clinic && existingAppointment.clinicId !== clinic.id) {
-      res.status(403).json({ error: 'Access denied' });
+      res.status(403).json({ 
+        error: 'Access denied',
+        message: 'You can only manage appointments for your clinic.',
+        code: 'CLINIC_ACCESS_DENIED'
+      });
+      return;
+    }
+
+    // Clinic staff can ONLY reschedule - cannot change other fields (User Story C3)
+    const allowedStaffFields = ['scheduledAt', 'status', 'notes', 'rescheduleReason'];
+    const attemptedFields = Object.keys(data);
+    const restrictedFields = attemptedFields.filter(f => !allowedStaffFields.includes(f));
+    
+    if (restrictedFields.length > 0) {
+      res.status(403).json({ 
+        error: 'Permission denied',
+        message: 'Clinic staff can only reschedule appointments.',
+        code: 'STAFF_RESTRICTED_FIELDS',
+        restrictedFields,
+      });
+      return;
+    }
+
+    // Staff can set status to RESCHEDULED, CONFIRMED, NO_SHOW, COMPLETED, DNR, or TWC
+    if (data.status && !['RESCHEDULED', 'CONFIRMED', 'NO_SHOW', 'COMPLETED', 'DNR', 'TWC'].includes(data.status)) {
+      res.status(403).json({ 
+        error: 'Permission denied',
+        message: 'Clinic staff can only mark appointments as Rescheduled, Confirmed, Completed, No Show, DNR, or TWC.',
+        code: 'INVALID_STAFF_STATUS'
+      });
       return;
     }
   }
 
+  // Determine if this is a reschedule (date changed)
+  const isReschedule = data.scheduledAt && 
+    new Date(data.scheduledAt).getTime() !== existingAppointment.scheduledAt.getTime();
+
+  // Build update data
+  const updateData: Record<string, unknown> = {
+    scheduledAt: data.scheduledAt ? new Date(data.scheduledAt) : undefined,
+    duration: data.duration,
+    notes: data.rescheduleReason 
+      ? `${data.notes || ''}\n[Reschedule Reason: ${data.rescheduleReason}]`.trim()
+      : data.notes,
+  };
+
+  // Auto-set status to RESCHEDULED if date changed (User Story C3)
+  if (isReschedule) {
+    updateData.status = 'RESCHEDULED';
+  } else if (data.status) {
+    updateData.status = data.status;
+  }
+
+  // Remove undefined values
+  Object.keys(updateData).forEach(key => {
+    if (updateData[key] === undefined) {
+      delete updateData[key];
+    }
+  });
+
   const appointment = await req.db.appointment.update({
     where: { id: req.params.id },
-    data: {
-      ...data,
-      scheduledAt: data.scheduledAt ? new Date(data.scheduledAt) : undefined,
-    },
+    data: updateData,
     include: {
       lead: {
         select: {
           id: true,
           name: true,
           phone: true,
+          email: true,
+          treatmentInterest: true,
         },
       },
       clinic: {
@@ -286,7 +475,14 @@ router.patch('/:id', asyncHandler(async (req: AuthenticatedRequest, res: Respons
     },
   });
 
-  res.json({ appointment });
+  // NOTE: User Story C3 specifies rescheduling does NOT update leads
+  // So we intentionally do NOT modify lead status here
+
+  res.json({ 
+    appointment,
+    message: isReschedule ? 'Appointment rescheduled successfully' : 'Appointment updated successfully',
+    isRescheduled: isReschedule,
+  });
 }));
 
 export const appointmentRoutes = router;

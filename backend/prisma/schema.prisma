@@ -48,6 +48,7 @@ model User {
   clinicAccess  UserClinicAccess[]
   notes         Note[]
   statusChanges LeadStatusHistory[]
+  assignedLeads Lead[]              @relation("AssignedLeads")
 
   @@index([tenantId])
   @@index([email])
@@ -56,7 +57,8 @@ model User {
 enum Role {
   SUPER_ADMIN
   ADMIN
-  CLINIC_STAFF
+  LEAD_USER      // Lead management role - can only see assigned leads
+  CLINIC_STAFF   // Clinic staff - appointment-only access
 }
 
 model UserClinicAccess {
@@ -77,10 +79,11 @@ model Lead {
   clinicId String? // null = TBD/unassigned
 
   // Contact Info
-  name  String
-  phone String
-  email String?
-  age   Int?
+  name            String
+  phone           String
+  email           String?
+  age             Int?
+  patientLocation String?  // Patient's location/address
 
   // Classification
   status            LeadStatus @default(NEW)
@@ -88,7 +91,11 @@ model Lead {
   source            LeadSource @default(OTHER)
   treatmentInterest String? // braces, aligners, implants, etc.
 
-  // Follow-up
+  // Assignment - Lead User can only see assigned leads
+  assignedUserId String? // User ID of assigned lead user
+
+  // Dates
+  enquiryDate     DateTime  @default(now()) // Date the lead was first received
   followUpDate    DateTime?
   lastContactedAt DateTime?
   nextAction      String?
@@ -104,6 +111,7 @@ model Lead {
   deletedAt DateTime? // soft delete
 
   clinic        Clinic?             @relation(fields: [clinicId], references: [id])
+  assignedUser  User?               @relation("AssignedLeads", fields: [assignedUserId], references: [id])
   notes         Note[]
   statusHistory LeadStatusHistory[]
   appointments  Appointment[]
@@ -113,19 +121,21 @@ model Lead {
   @@index([tenantId, status])
   @@index([tenantId, followUpDate])
   @@index([tenantId, clinicId, status])
+  @@index([tenantId, assignedUserId])
 }
 
 enum LeadStatus {
   NEW
-  ATTEMPTING
+  ATTEMPTING      // No follow-up required
   CONNECTED
   APPOINTMENT_BOOKED
   VISITED
-  TREATMENT_STARTED
+  TREATMENT_STARTED  // Treatment status for analytics
   RESCHEDULED
   LOST
-  DNC
-  DNR
+  DNA             // Did Not Attend
+  DNC             // Do Not Contact
+  DNR             // Do Not Return
 }
 
 enum Priority {
@@ -217,6 +227,8 @@ enum AppointmentStatus {
   CANCELLED
   NO_SHOW
   RESCHEDULED
+  DNR        // Did Not Respond / Did Not Report
+  TWC        // To Will Call - patient will call back
 }
 
 // ── PLATFORM-LEVEL TENANT REGISTRY ───────────────────────

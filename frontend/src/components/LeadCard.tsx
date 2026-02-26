@@ -16,7 +16,7 @@ import {
   Trash2,
 } from 'lucide-react';
 import { type Lead, type LeadStatus, type Priority, type LeadSource, useLeadStore } from '../store/leadStore';
-import { useAuthStore } from '../store/authStore';
+import { useAuthStore, isAdminRole, isLeadUserRole } from '../store/authStore';
 import { api } from '../api/client';
 import { clsx } from 'clsx';
 import { format, parseISO, isToday, isPast } from 'date-fns';
@@ -32,6 +32,7 @@ const statusColors: Record<LeadStatus, string> = {
   TREATMENT_STARTED: 'bg-teal-100 text-teal-700 ring-teal-500/20',
   RESCHEDULED: 'bg-orange-100 text-orange-700 ring-orange-500/20',
   LOST: 'bg-red-100 text-red-700 ring-red-500/20',
+  DNA: 'bg-amber-100 text-amber-700 ring-amber-500/20',
   DNC: 'bg-gray-100 text-gray-600 ring-gray-500/20',
   DNR: 'bg-gray-200 text-gray-700 ring-gray-500/20',
 };
@@ -45,19 +46,27 @@ const statusLabels: Record<LeadStatus, string> = {
   TREATMENT_STARTED: 'Treatment',
   RESCHEDULED: 'Rescheduled',
   LOST: 'Lost',
+  DNA: 'DNA',
   DNC: 'DNC',
   DNR: 'DNR',
 };
 
-// All statuses for admin, limited for clinic staff
-const adminStatuses: LeadStatus[] = [
-  'NEW', 'ATTEMPTING', 'CONNECTED', 'APPOINTMENT_BOOKED', 'VISITED',
-  'TREATMENT_STARTED', 'RESCHEDULED', 'LOST', 'DNC', 'DNR',
+// Statuses that require mandatory follow-up (User Story L2, L3)
+// "ATTEMPTING" is excluded - no follow-up required
+const STATUSES_REQUIRING_FOLLOWUP: LeadStatus[] = [
+  'CONNECTED', 'APPOINTMENT_BOOKED', 'VISITED', 'TREATMENT_STARTED',
+  'RESCHEDULED', 'LOST', 'DNA',
 ];
 
-const staffStatuses: LeadStatus[] = [
+// All statuses for admin, limited for lead users
+const adminStatuses: LeadStatus[] = [
   'NEW', 'ATTEMPTING', 'CONNECTED', 'APPOINTMENT_BOOKED', 'VISITED',
-  'TREATMENT_STARTED', 'RESCHEDULED', 'LOST',
+  'TREATMENT_STARTED', 'RESCHEDULED', 'LOST', 'DNA', 'DNC', 'DNR',
+];
+
+// Lead User can use these statuses (User Story L3)
+const leadUserStatuses: LeadStatus[] = [
+  'ATTEMPTING', 'VISITED', 'TREATMENT_STARTED', 'RESCHEDULED', 'LOST', 'DNA',
 ];
 
 // Priority styles
@@ -136,9 +145,17 @@ export default function LeadCard({ lead, index, onSelect: _onSelect }: LeadCardP
   }>>([]);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  
+  // Mandatory follow-up modal state (User Story L2)
+  const [showFollowUpModal, setShowFollowUpModal] = useState(false);
+  const [pendingStatusChange, setPendingStatusChange] = useState<LeadStatus | null>(null);
+  const [followUpDateForModal, setFollowUpDateForModal] = useState('');
+  const [followUpError, setFollowUpError] = useState<string | null>(null);
+  
   const { updateLead, assignLead, deleteLead, fetchLeads } = useLeadStore();
   const { user } = useAuthStore();
-  const isAdmin = user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN';
+  const isAdmin = user?.role ? isAdminRole(user.role) : false;
+  const isLeadUser = user?.role ? isLeadUserRole(user.role) : false;
 
   // Edit form state
   const [editData, setEditData] = useState({
@@ -146,8 +163,12 @@ export default function LeadCard({ lead, index, onSelect: _onSelect }: LeadCardP
     phone: lead.phone,
     email: lead.email || '',
     age: lead.age?.toString() || '',
+    patientLocation: lead.patientLocation || '',
     treatmentInterest: lead.treatmentInterest || '',
     source: lead.source,
+    enquiryDate: lead.enquiryDate
+      ? format(parseISO(lead.enquiryDate), "yyyy-MM-dd'T'HH:mm")
+      : '',
     followUpDate: lead.followUpDate
       ? format(parseISO(lead.followUpDate), "yyyy-MM-dd'T'HH:mm")
       : '',
@@ -156,14 +177,14 @@ export default function LeadCard({ lead, index, onSelect: _onSelect }: LeadCardP
     priority: lead.priority,
   });
 
-  // Fetch clinics when expanding (for clinic assignment)
+  // Fetch clinics when expanding (for clinic assignment - Admin and Lead Users)
   useEffect(() => {
-    if (isExpanded && isAdmin && clinics.length === 0) {
+    if (isExpanded && (isAdmin || isLeadUser) && clinics.length === 0) {
       api.get('/clinics').then((res) => {
         setClinics(res.data.clinics);
       }).catch(() => {});
     }
-  }, [isExpanded, isAdmin, clinics.length]);
+  }, [isExpanded, isAdmin, isLeadUser, clinics.length]);
 
   // Fetch appointments for this lead when expanding
   const fetchLeadAppointments = () => {
@@ -185,8 +206,12 @@ export default function LeadCard({ lead, index, onSelect: _onSelect }: LeadCardP
       phone: lead.phone,
       email: lead.email || '',
       age: lead.age?.toString() || '',
+      patientLocation: lead.patientLocation || '',
       treatmentInterest: lead.treatmentInterest || '',
       source: lead.source,
+      enquiryDate: lead.enquiryDate
+        ? format(parseISO(lead.enquiryDate), "yyyy-MM-dd'T'HH:mm")
+        : '',
       followUpDate: lead.followUpDate
         ? format(parseISO(lead.followUpDate), "yyyy-MM-dd'T'HH:mm")
         : '',
@@ -196,8 +221,18 @@ export default function LeadCard({ lead, index, onSelect: _onSelect }: LeadCardP
     });
   }, [lead]);
 
+  // Get follow-up badge with color indicators (User Story S2)
   const getFollowUpBadge = () => {
     if (!lead.followUpDate) {
+      // Show warning if no follow-up and status requires it
+      if (STATUSES_REQUIRING_FOLLOWUP.includes(lead.status)) {
+        return (
+          <span className="flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700 animate-pulse">
+            <Clock className="h-3 w-3" />
+            No Follow-up!
+          </span>
+        );
+      }
       return null;
     }
 
@@ -219,8 +254,37 @@ export default function LeadCard({ lead, index, onSelect: _onSelect }: LeadCardP
       );
     }
     return (
-      <span className="flex items-center gap-1 text-xs text-slate-500">
+      <span className="flex items-center gap-1 rounded-full bg-green-50 px-2 py-0.5 text-xs font-medium text-green-700">
         <Calendar className="h-3 w-3" />
+        {format(date, 'MMM d')}
+      </span>
+    );
+  };
+
+  // Get last contact badge with color indicators (User Story S2, L4)
+  const getLastContactBadge = () => {
+    if (!lead.lastContactedAt) {
+      return (
+        <span className="flex items-center gap-1 text-xs text-slate-400">
+          Never contacted
+        </span>
+      );
+    }
+
+    const date = parseISO(lead.lastContactedAt);
+    const daysSinceContact = Math.floor((Date.now() - date.getTime()) / (1000 * 60 * 60 * 24));
+
+    // Color coding: Red if > 7 days, Orange if > 3 days, Green if recent
+    let colorClass = 'bg-green-50 text-green-700';
+    if (daysSinceContact > 7) {
+      colorClass = 'bg-red-50 text-red-700';
+    } else if (daysSinceContact > 3) {
+      colorClass = 'bg-amber-50 text-amber-700';
+    }
+
+    return (
+      <span className={clsx('flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium', colorClass)}>
+        <Clock className="h-3 w-3" />
         {format(date, 'MMM d')}
       </span>
     );
@@ -259,8 +323,12 @@ export default function LeadCard({ lead, index, onSelect: _onSelect }: LeadCardP
       phone: lead.phone,
       email: lead.email || '',
       age: lead.age?.toString() || '',
+      patientLocation: lead.patientLocation || '',
       treatmentInterest: lead.treatmentInterest || '',
       source: lead.source,
+      enquiryDate: lead.enquiryDate
+        ? format(parseISO(lead.enquiryDate), "yyyy-MM-dd'T'HH:mm")
+        : '',
       followUpDate: lead.followUpDate
         ? format(parseISO(lead.followUpDate), "yyyy-MM-dd'T'HH:mm")
         : '',
@@ -284,6 +352,9 @@ export default function LeadCard({ lead, index, onSelect: _onSelect }: LeadCardP
       if (editData.age !== (lead.age?.toString() || '')) {
         updatePayload.age = editData.age ? parseInt(editData.age, 10) : undefined;
       }
+      if (editData.patientLocation !== (lead.patientLocation || '')) {
+        updatePayload.patientLocation = editData.patientLocation || undefined;
+      }
       if (editData.treatmentInterest !== (lead.treatmentInterest || '')) {
         updatePayload.treatmentInterest = editData.treatmentInterest || undefined;
       }
@@ -291,6 +362,16 @@ export default function LeadCard({ lead, index, onSelect: _onSelect }: LeadCardP
       if (editData.priority !== lead.priority) updatePayload.priority = editData.priority;
       if (editData.nextAction !== (lead.nextAction || '')) {
         updatePayload.nextAction = editData.nextAction || undefined;
+      }
+
+      // Handle enquiry date
+      const currentEnquiry = lead.enquiryDate
+        ? format(parseISO(lead.enquiryDate), "yyyy-MM-dd'T'HH:mm")
+        : '';
+      if (editData.enquiryDate !== currentEnquiry) {
+        updatePayload.enquiryDate = editData.enquiryDate
+          ? new Date(editData.enquiryDate).toISOString()
+          : undefined;
       }
 
       // Handle follow-up date
@@ -326,13 +407,66 @@ export default function LeadCard({ lead, index, onSelect: _onSelect }: LeadCardP
     }
   };
 
+  // Handle status change with mandatory follow-up check (User Story L2)
   const handleStatusChange = async (status: LeadStatus) => {
+    // Check if this status requires follow-up (User Story L2, L3)
+    if (STATUSES_REQUIRING_FOLLOWUP.includes(status) && status !== 'ATTEMPTING') {
+      // Show modal to collect follow-up date
+      setPendingStatusChange(status);
+      setFollowUpDateForModal('');
+      setFollowUpError(null);
+      setShowFollowUpModal(true);
+      return;
+    }
+
+    // For ATTEMPTING and other statuses that don't require follow-up
     try {
       await updateLead(lead.id, { status });
       await fetchLeads();
-    } catch {
-      // Error handled by store
+    } catch (err) {
+      setEditError(err instanceof Error ? err.message : 'Failed to update status');
     }
+  };
+
+  // Confirm status change with follow-up date (User Story L2)
+  const handleConfirmStatusWithFollowUp = async () => {
+    if (!pendingStatusChange) return;
+
+    // Validate follow-up date is provided
+    if (!followUpDateForModal) {
+      setFollowUpError('Follow-up date is required for this status');
+      return;
+    }
+
+    // Validate follow-up date is in the future
+    const followUpDate = new Date(followUpDateForModal);
+    if (followUpDate <= new Date()) {
+      setFollowUpError('Follow-up date must be in the future');
+      return;
+    }
+
+    try {
+      await updateLead(lead.id, { 
+        status: pendingStatusChange,
+        followUpDate: followUpDate.toISOString(),
+      });
+      await fetchLeads();
+      setShowFollowUpModal(false);
+      setPendingStatusChange(null);
+      setFollowUpDateForModal('');
+      setFollowUpError(null);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to update status';
+      setFollowUpError(errorMessage);
+    }
+  };
+
+  // Cancel status change modal
+  const handleCancelFollowUpModal = () => {
+    setShowFollowUpModal(false);
+    setPendingStatusChange(null);
+    setFollowUpDateForModal('');
+    setFollowUpError(null);
   };
 
   const handlePriorityChange = async (priority: Priority) => {
@@ -413,7 +547,8 @@ export default function LeadCard({ lead, index, onSelect: _onSelect }: LeadCardP
     }
   };
 
-  const availableStatuses = isAdmin ? adminStatuses : staffStatuses;
+  // Determine available statuses based on role (User Story L3)
+  const availableStatuses = isAdmin ? adminStatuses : leadUserStatuses;
 
   return (
     <div
@@ -473,14 +608,20 @@ export default function LeadCard({ lead, index, onSelect: _onSelect }: LeadCardP
           </div>
         </div>
 
-        {/* Right side - badges and actions */}
+        {/* Right side - badges and actions (User Story S2 - Display Rules) */}
         <div className="flex items-center gap-3">
+          {/* Last Contact badge - shown near lead name (User Story L4, S2) */}
+          <div className="hidden sm:flex flex-col items-end gap-0.5">
+            <span className="text-[10px] uppercase tracking-wide text-slate-400">Last Contact</span>
+            {getLastContactBadge()}
+          </div>
+
           {/* Source badge */}
-          <span className="hidden text-xs text-slate-400 sm:block">
+          <span className="hidden text-xs text-slate-400 lg:block">
             {sourceLabels[lead.source] || lead.source}
           </span>
 
-          {/* Follow-up badge */}
+          {/* Follow-up badge with color indicator (User Story S2) */}
           {getFollowUpBadge()}
 
           {/* Notes count */}
@@ -522,6 +663,65 @@ export default function LeadCard({ lead, index, onSelect: _onSelect }: LeadCardP
           </button>
         </div>
       </div>
+
+      {/* Quick Info Row - Enquiry Date, Follow-up, Quick Status (Admin and Lead User) */}
+      {(isAdmin || isLeadUser) && (
+        <div className="border-t border-slate-100 bg-slate-50/50 px-4 py-2">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            {/* Date Info */}
+            <div className="flex items-center gap-4 text-xs">
+              <div className="flex items-center gap-1.5">
+                <span className="text-slate-400">Enquiry:</span>
+                <span className="font-medium text-slate-700">
+                  {lead.enquiryDate 
+                    ? format(parseISO(lead.enquiryDate), 'MMM d, yyyy')
+                    : lead.createdAt
+                    ? format(parseISO(lead.createdAt), 'MMM d, yyyy')
+                    : 'N/A'
+                  }
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="text-slate-400">Follow-up:</span>
+                <span className={clsx(
+                  'font-medium',
+                  lead.followUpDate && isPast(parseISO(lead.followUpDate)) && !isToday(parseISO(lead.followUpDate))
+                    ? 'text-red-600'
+                    : lead.followUpDate && isToday(parseISO(lead.followUpDate))
+                    ? 'text-amber-600'
+                    : 'text-slate-700'
+                )}>
+                  {lead.followUpDate 
+                    ? format(parseISO(lead.followUpDate), 'MMM d, yyyy')
+                    : 'Not set'
+                  }
+                </span>
+              </div>
+            </div>
+
+            {/* Quick Status Buttons */}
+            <div className="flex items-center gap-1">
+              <span className="mr-1 text-[10px] uppercase tracking-wide text-slate-400">Status:</span>
+              {availableStatuses.slice(0, 5).map((s) => (
+                <button
+                  key={s}
+                  onClick={(e) => { e.stopPropagation(); handleStatusChange(s); }}
+                  disabled={lead.status === s}
+                  className={clsx(
+                    'rounded px-2 py-1 text-[10px] font-medium transition-all',
+                    lead.status === s
+                      ? 'bg-slate-800 text-white'
+                      : 'bg-white border border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-50',
+                    lead.status === s && 'cursor-not-allowed opacity-50'
+                  )}
+                >
+                  {statusLabels[s]}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Expanded content */}
       {isExpanded && (
@@ -614,6 +814,19 @@ export default function LeadCard({ lead, index, onSelect: _onSelect }: LeadCardP
                   />
                 </div>
 
+                {/* Patient Location */}
+                <div className="sm:col-span-2">
+                  <label className="mb-1 block text-xs font-medium text-slate-500">Patient Location</label>
+                  <input
+                    type="text"
+                    name="patientLocation"
+                    value={editData.patientLocation}
+                    onChange={handleEditChange}
+                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-dental-500 focus:outline-none focus:ring-2 focus:ring-dental-500/20"
+                    placeholder="e.g., Ganapathy, Coimbatore"
+                  />
+                </div>
+
                 {/* Treatment Interest */}
                 <div>
                   <label className="mb-1 block text-xs font-medium text-slate-500">Treatment Interest</label>
@@ -645,6 +858,18 @@ export default function LeadCard({ lead, index, onSelect: _onSelect }: LeadCardP
                   </select>
                 </div>
 
+                {/* Enquiry Date */}
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-slate-500">Enquiry Date</label>
+                  <input
+                    type="datetime-local"
+                    name="enquiryDate"
+                    value={editData.enquiryDate}
+                    onChange={handleEditChange}
+                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-dental-500 focus:outline-none focus:ring-2 focus:ring-dental-500/20"
+                  />
+                </div>
+
                 {/* Follow-up Date */}
                 <div>
                   <label className="mb-1 block text-xs font-medium text-slate-500">Follow-up Date</label>
@@ -657,8 +882,8 @@ export default function LeadCard({ lead, index, onSelect: _onSelect }: LeadCardP
                   />
                 </div>
 
-                {/* Clinic Assignment (Admin only) */}
-                {isAdmin && (
+                {/* Clinic Assignment (Admin and Lead User) */}
+                {(isAdmin || isLeadUser) && (
                   <div>
                     <label className="mb-1 block text-xs font-medium text-slate-500">Assign to Clinic</label>
                     <select
@@ -743,6 +968,9 @@ export default function LeadCard({ lead, index, onSelect: _onSelect }: LeadCardP
                   <p className="mt-1 text-sm text-slate-900">{lead.phone}</p>
                   {lead.email && <p className="text-sm text-slate-500">{lead.email}</p>}
                   {lead.age && <p className="text-sm text-slate-500">{lead.age} years old</p>}
+                  {lead.patientLocation && (
+                    <p className="text-sm text-slate-500">📍 {lead.patientLocation}</p>
+                  )}
                 </div>
 
                 <div>
@@ -751,6 +979,16 @@ export default function LeadCard({ lead, index, onSelect: _onSelect }: LeadCardP
                   {lead.campaignName && (
                     <p className="text-sm text-slate-500">{lead.campaignName}</p>
                   )}
+                </div>
+
+                <div>
+                  <p className="text-xs font-medium uppercase tracking-wide text-slate-400">Enquiry Date</p>
+                  <p className="mt-1 text-sm text-slate-900">
+                    {lead.enquiryDate
+                      ? format(parseISO(lead.enquiryDate), 'PPP')
+                      : format(parseISO(lead.createdAt), 'PPP')
+                    }
+                  </p>
                 </div>
 
                 <div>
@@ -1025,6 +1263,78 @@ export default function LeadCard({ lead, index, onSelect: _onSelect }: LeadCardP
           {/* Notes thread */}
           <div className="border-t border-slate-100">
             <NoteThread leadId={lead.id} notes={lead.notes || []} />
+          </div>
+        </div>
+      )}
+
+      {/* Mandatory Follow-up Modal (User Story L2) */}
+      {showFollowUpModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-2xl animate-in">
+            <div className="mb-4 flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-100">
+                <Calendar className="h-5 w-5 text-amber-600" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-slate-900">Follow-up Required</h3>
+                <p className="text-sm text-slate-500">
+                  Status "{pendingStatusChange}" requires a follow-up date
+                </p>
+              </div>
+            </div>
+
+            {followUpError && (
+              <div className="mb-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700 border border-red-200">
+                <div className="flex items-center gap-2">
+                  <X className="h-4 w-4 flex-shrink-0" />
+                  <span>{followUpError}</span>
+                </div>
+              </div>
+            )}
+
+            <div className="mb-6">
+              <label className="mb-2 block text-sm font-medium text-slate-700">
+                Set Follow-up Date <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="datetime-local"
+                value={followUpDateForModal}
+                onChange={(e) => {
+                  setFollowUpDateForModal(e.target.value);
+                  setFollowUpError(null);
+                }}
+                min={format(new Date(), "yyyy-MM-dd'T'HH:mm")}
+                className={clsx(
+                  'w-full rounded-lg border px-4 py-3 text-sm transition-colors',
+                  'focus:border-dental-500 focus:outline-none focus:ring-2 focus:ring-dental-500/20',
+                  followUpError ? 'border-red-300 bg-red-50' : 'border-slate-300'
+                )}
+              />
+              <p className="mt-2 text-xs text-slate-500">
+                This ensures no lead is missed. Follow-up date must be in the future.
+              </p>
+            </div>
+
+            <div className="flex items-center justify-end gap-3">
+              <button
+                onClick={handleCancelFollowUpModal}
+                className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmStatusWithFollowUp}
+                disabled={!followUpDateForModal}
+                className={clsx(
+                  'rounded-lg px-4 py-2 text-sm font-medium text-white transition-colors',
+                  followUpDateForModal
+                    ? 'bg-dental-500 hover:bg-dental-600'
+                    : 'cursor-not-allowed bg-slate-300'
+                )}
+              >
+                Update Status
+              </button>
+            </div>
           </div>
         </div>
       )}

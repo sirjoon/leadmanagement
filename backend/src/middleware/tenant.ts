@@ -81,6 +81,7 @@ export const tenantMiddleware = async (
       email: decoded.email,
     };
 
+
     // Set Prisma client for this tenant's DB
     req.db = getPrismaClient(decoded.tenant_id);
 
@@ -145,6 +146,12 @@ export const requireClinicAccess = (
     return;
   }
 
+  // Lead users can access based on their assigned leads (checked at route level)
+  if (req.tenant.role === 'LEAD_USER') {
+    next();
+    return;
+  }
+
   // Clinic staff can only access their assigned clinic
   const requestedClinic = req.params.clinicId || req.body.clinicId;
   if (requestedClinic && req.tenant.location !== requestedClinic) {
@@ -153,4 +160,85 @@ export const requireClinicAccess = (
   }
 
   next();
+};
+
+/**
+ * Statuses that require mandatory follow-up date
+ * "ATTEMPTING" is excluded as per user story L3
+ */
+export const STATUSES_REQUIRING_FOLLOWUP: string[] = [
+  'CONNECTED',
+  'APPOINTMENT_BOOKED',
+  'VISITED',
+  'TREATMENT_STARTED',
+  'RESCHEDULED',
+  'LOST',
+  'DNA',
+];
+
+/**
+ * Middleware to validate mandatory follow-up date for status changes
+ */
+export const validateFollowUpRequired = (
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+): void => {
+  const { status, followUpDate } = req.body;
+
+  // Only validate if status is being changed
+  if (!status) {
+    next();
+    return;
+  }
+
+  // Check if new status requires follow-up
+  if (STATUSES_REQUIRING_FOLLOWUP.includes(status)) {
+    // Follow-up date must be provided
+    if (!followUpDate) {
+      res.status(400).json({
+        error: 'Follow-up date is required',
+        message: `Status "${status}" requires a follow-up date. Please set a follow-up date to continue.`,
+        code: 'FOLLOWUP_REQUIRED',
+        field: 'followUpDate',
+      });
+      return;
+    }
+
+    // Validate follow-up date is in the future
+    const followUp = new Date(followUpDate);
+    const now = new Date();
+    if (followUp < now) {
+      res.status(400).json({
+        error: 'Invalid follow-up date',
+        message: 'Follow-up date must be in the future.',
+        code: 'FOLLOWUP_INVALID',
+        field: 'followUpDate',
+      });
+      return;
+    }
+  }
+
+  next();
+};
+
+/**
+ * Check if user has admin privileges (Admin or Super Admin)
+ */
+export const isAdminUser = (role: Role): boolean => {
+  return role === 'ADMIN' || role === 'SUPER_ADMIN';
+};
+
+/**
+ * Check if user is a Lead User
+ */
+export const isLeadUser = (role: Role): boolean => {
+  return role === 'LEAD_USER';
+};
+
+/**
+ * Check if user is Clinic Staff
+ */
+export const isClinicStaff = (role: Role): boolean => {
+  return role === 'CLINIC_STAFF';
 };

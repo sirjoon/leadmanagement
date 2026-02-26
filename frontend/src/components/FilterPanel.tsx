@@ -211,11 +211,14 @@ export default function FilterPanel({ onClose }: FilterPanelProps) {
               onChange={(e) => setLocalFilters((prev) => ({
                 ...prev,
                 sortBy: e.target.value as typeof filters.sortBy,
+                // Auto-set ascending for overdue (oldest follow-up first = most overdue)
+                sortOrder: e.target.value === 'followUpDate' ? 'asc' : prev.sortOrder,
               }))}
               className="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-dental-500 focus:outline-none"
             >
               <option value="createdAt">Created Date</option>
-              <option value="followUpDate">Follow-up Date</option>
+              <option value="followUpDate">Follow-up Date (Overdue First)</option>
+              <option value="enquiryDate">Enquiry Date</option>
               <option value="updatedAt">Last Updated</option>
               <option value="name">Name</option>
             </select>
@@ -227,8 +230,8 @@ export default function FilterPanel({ onClose }: FilterPanelProps) {
               }))}
               className="rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-dental-500 focus:outline-none"
             >
-              <option value="desc">Newest first</option>
               <option value="asc">Oldest first</option>
+              <option value="desc">Newest first</option>
             </select>
           </div>
         </div>

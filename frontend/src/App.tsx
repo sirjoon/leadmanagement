@@ -1,5 +1,5 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
-import { useAuthStore } from './store/authStore';
+import { useAuthStore, isAdminRole, isClinicStaffRole } from './store/authStore';
 import Layout from './components/Layout';
 import LoginPage from './pages/LoginPage';
 import LeadsPage from './pages/LeadsPage';
@@ -31,7 +31,64 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+/**
+ * Role-based route protection
+ * User Story C4: Clinic staff cannot access leads, analytics, or reports
+ * User Story A3: Only Admin can access analytics dashboard
+ */
+function AdminOnlyRoute({ children }: { children: React.ReactNode }) {
+  const { user } = useAuthStore();
+  
+  if (!user || !isAdminRole(user.role)) {
+    return (
+      <div className="flex h-full items-center justify-center p-8">
+        <div className="max-w-md text-center">
+          <div className="mb-4 text-6xl">🔒</div>
+          <h2 className="mb-2 text-xl font-semibold text-slate-900">Access Restricted</h2>
+          <p className="text-slate-600">
+            This section is only available to administrators. 
+            Please contact your admin if you need access.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  return <>{children}</>;
+}
+
+/**
+ * Leads route - accessible to Admin and Lead Users, NOT Clinic Staff
+ * User Story C4: Clinic staff cannot view or manage leads
+ */
+function LeadAccessRoute({ children }: { children: React.ReactNode }) {
+  const { user } = useAuthStore();
+  
+  if (!user || isClinicStaffRole(user.role)) {
+    return (
+      <div className="flex h-full items-center justify-center p-8">
+        <div className="max-w-md text-center">
+          <div className="mb-4 text-6xl">📋</div>
+          <h2 className="mb-2 text-xl font-semibold text-slate-900">Lead Management</h2>
+          <p className="text-slate-600">
+            Lead management is not available for clinic staff. 
+            Please use the Appointments section to manage patient visits.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  return <>{children}</>;
+}
+
 function App() {
+  const { user } = useAuthStore();
+  const isStaff = user ? isClinicStaffRole(user.role) : false;
+  
+  // Determine default route based on role (User Story C1, C4)
+  const defaultRoute = isStaff ? '/appointments' : '/leads';
+
   return (
     <Routes>
       {/* Public routes */}
@@ -45,17 +102,50 @@ function App() {
           <ProtectedRoute>
             <Layout>
               <Routes>
-                <Route path="/" element={<Navigate to="/leads" replace />} />
-                <Route path="/leads" element={<LeadsPage />} />
-                <Route path="/leads/:id" element={<LeadDetailPage />} />
+                {/* Default redirect based on role */}
+                <Route path="/" element={<Navigate to={defaultRoute} replace />} />
+                
+                {/* Leads - Admin and Lead Users only (User Story C4) */}
+                <Route path="/leads" element={
+                  <LeadAccessRoute>
+                    <LeadsPage />
+                  </LeadAccessRoute>
+                } />
+                <Route path="/leads/:id" element={
+                  <LeadAccessRoute>
+                    <LeadDetailPage />
+                  </LeadAccessRoute>
+                } />
+                
+                {/* Appointments - All roles (User Story C1) */}
                 <Route path="/appointments" element={<AppointmentsPage />} />
-                <Route path="/analytics" element={<AnalyticsPage />} />
-                <Route path="/users" element={<UsersPage />} />
-                <Route path="/reports" element={<ReportsPage />} />
+                
+                {/* Analytics - Admin only (User Story A3) */}
+                <Route path="/analytics" element={
+                  <AdminOnlyRoute>
+                    <AnalyticsPage />
+                  </AdminOnlyRoute>
+                } />
+                
+                {/* Users - Admin only (User Story A1) */}
+                <Route path="/users" element={
+                  <AdminOnlyRoute>
+                    <UsersPage />
+                  </AdminOnlyRoute>
+                } />
+                
+                {/* Reports - Admin only (User Story A3) */}
+                <Route path="/reports" element={
+                  <AdminOnlyRoute>
+                    <ReportsPage />
+                  </AdminOnlyRoute>
+                } />
+                
+                {/* Settings - All roles */}
                 <Route path="/settings" element={<SettingsPage />} />
 
-                {/* Catch-all: redirect unknown paths to /leads */}
-                <Route path="*" element={<Navigate to="/leads" replace />} />
+                {/* Catch-all: redirect unknown paths to default route */}
+                <Route path="*" element={<Navigate to={defaultRoute} replace />} />
               </Routes>
             </Layout>
           </ProtectedRoute>

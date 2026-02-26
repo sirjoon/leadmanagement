@@ -13,7 +13,7 @@ import {
   FileText
 } from 'lucide-react';
 import { useState } from 'react';
-import { useAuthStore } from '../store/authStore';
+import { useAuthStore, isAdminRole, isClinicStaffRole, isLeadUserRole, Role } from '../store/authStore';
 import { clsx } from 'clsx';
 
 // Tooth icon SVG
@@ -27,14 +27,52 @@ interface LayoutProps {
   children: React.ReactNode;
 }
 
-const navItems = [
-  { path: '/leads', label: 'Leads', icon: Users, adminOnly: false },
-  { path: '/appointments', label: 'Appointments', icon: Calendar, adminOnly: false },
-  { path: '/analytics', label: 'Analytics', icon: BarChart3, adminOnly: true },
-  { path: '/reports', label: 'Reports', icon: FileText, adminOnly: true },
-  { path: '/users', label: 'Users', icon: UserCircle, adminOnly: true },
-  { path: '/settings', label: 'Settings', icon: Settings, adminOnly: false },
+/**
+ * Navigation items with role-based access
+ * User Story C4: Clinic staff sees only appointments
+ * User Story A1: Admin sees all items
+ * User Story L1: Lead users see leads and appointments
+ */
+type NavItemAccess = 'all' | 'admin' | 'lead_access';
+
+interface NavItem {
+  path: string;
+  label: string;
+  icon: React.FC<{ className?: string }>;
+  access: NavItemAccess;
+}
+
+const navItems: NavItem[] = [
+  { path: '/leads', label: 'Leads', icon: Users, access: 'lead_access' },
+  { path: '/appointments', label: 'Appointments', icon: Calendar, access: 'all' },
+  { path: '/analytics', label: 'Analytics', icon: BarChart3, access: 'admin' },
+  { path: '/reports', label: 'Reports', icon: FileText, access: 'admin' },
+  { path: '/users', label: 'Users', icon: UserCircle, access: 'admin' },
+  { path: '/settings', label: 'Settings', icon: Settings, access: 'all' },
 ];
+
+/**
+ * Check if a user with given role can access a nav item
+ */
+const canAccessNavItem = (role: Role, access: NavItemAccess): boolean => {
+  if (access === 'all') return true;
+  if (access === 'admin') return isAdminRole(role);
+  if (access === 'lead_access') return isAdminRole(role) || isLeadUserRole(role);
+  return false;
+};
+
+/**
+ * Get role display label
+ */
+const getRoleLabel = (role: Role): string => {
+  switch (role) {
+    case 'SUPER_ADMIN': return 'Super Admin';
+    case 'ADMIN': return 'Admin';
+    case 'LEAD_USER': return 'Lead User';
+    case 'CLINIC_STAFF': return 'Clinic Staff';
+    default: return String(role).replace('_', ' ');
+  }
+};
 
 export default function Layout({ children }: LayoutProps) {
   const location = useLocation();
@@ -42,9 +80,13 @@ export default function Layout({ children }: LayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
 
-  const isAdmin = user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN';
+  const isAdmin = user?.role ? isAdminRole(user.role) : false;
+  const isStaff = user?.role ? isClinicStaffRole(user.role) : false;
 
-  const filteredNavItems = navItems.filter(item => !item.adminOnly || isAdmin);
+  // Filter nav items based on role
+  const filteredNavItems = navItems.filter(item => 
+    user?.role ? canAccessNavItem(user.role, item.access) : false
+  );
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -101,9 +143,34 @@ export default function Layout({ children }: LayoutProps) {
           })}
         </nav>
 
-        {/* Clinic selector (for admin) */}
-        {isAdmin && user?.clinics && user.clinics.length > 0 && (
-          <div className="absolute bottom-24 left-4 right-4">
+        {/* Role indicator and clinic selector */}
+        <div className="absolute bottom-24 left-4 right-4 space-y-3">
+          {/* Role badge */}
+          <div className={clsx(
+            'rounded-lg p-3',
+            isAdmin ? 'bg-dental-500/20' : isStaff ? 'bg-amber-500/20' : 'bg-blue-500/20'
+          )}>
+            <div className="flex items-center gap-2">
+              <UserCircle className={clsx(
+                'h-5 w-5',
+                isAdmin ? 'text-dental-400' : isStaff ? 'text-amber-400' : 'text-blue-400'
+              )} />
+              <div>
+                <p className={clsx(
+                  'text-sm font-medium',
+                  isAdmin ? 'text-dental-400' : isStaff ? 'text-amber-400' : 'text-blue-400'
+                )}>
+                  {user?.role ? getRoleLabel(user.role) : 'User'}
+                </p>
+                <p className="text-xs text-slate-400">
+                  {isAdmin ? 'Full CRM Access' : isStaff ? 'Appointments Only' : 'Lead Management'}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Clinic selector (for admin) */}
+          {isAdmin && user?.clinics && user.clinics.length > 0 && (
             <div className="rounded-lg bg-slate-800 p-3">
               <div className="mb-2 flex items-center gap-2 text-xs text-slate-400">
                 <Building2 className="h-4 w-4" />
@@ -120,8 +187,21 @@ export default function Layout({ children }: LayoutProps) {
                 ))}
               </div>
             </div>
-          </div>
-        )}
+          )}
+
+          {/* Clinic info for staff (read-only) */}
+          {isStaff && user?.location && (
+            <div className="rounded-lg bg-slate-800 p-3">
+              <div className="flex items-center gap-2 text-xs text-slate-400">
+                <Building2 className="h-4 w-4" />
+                <span>Your Clinic</span>
+              </div>
+              <p className="mt-1 text-sm font-medium capitalize text-slate-300">
+                {user.location.replace(/-/g, ' ')}
+              </p>
+            </div>
+          )}
+        </div>
 
         {/* User menu */}
         <div className="absolute bottom-4 left-4 right-4">
@@ -163,7 +243,7 @@ export default function Layout({ children }: LayoutProps) {
               </div>
               <div className="hidden text-left sm:block">
                 <p className="font-medium text-slate-900">{user?.name}</p>
-                <p className="text-xs text-slate-500">{user?.role?.replace('_', ' ')}</p>
+                <p className="text-xs text-slate-500">{user?.role ? getRoleLabel(user.role) : ''}</p>
               </div>
               <ChevronDown className="h-4 w-4 text-slate-400" />
             </button>

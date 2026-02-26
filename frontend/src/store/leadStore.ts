@@ -10,6 +10,7 @@ export type LeadStatus =
   | 'TREATMENT_STARTED' 
   | 'RESCHEDULED' 
   | 'LOST' 
+  | 'DNA'  // Did Not Attend (User Story A3)
   | 'DNC' 
   | 'DNR';
 
@@ -44,22 +45,32 @@ export interface Note {
   };
 }
 
+export interface AssignedUser {
+  id: string;
+  name: string;
+  email: string;
+}
+
 export interface Lead {
   id: string;
   name: string;
   phone: string;
   email: string | null;
   age: number | null;
+  patientLocation: string | null;  // Patient's location/address
   status: LeadStatus;
   priority: Priority;
   source: LeadSource;
   treatmentInterest: string | null;
+  enquiryDate: string;             // Date the lead was first received
   followUpDate: string | null;
   lastContactedAt: string | null;
   nextAction: string | null;
   campaignName: string | null;
   clinicId: string | null;
   clinic: Clinic | null;
+  assignedUserId: string | null;  // Lead User assignment
+  assignedUser: AssignedUser | null;  // Lead User details
   notes: Note[];
   createdAt: string;
   updatedAt: string;
@@ -79,7 +90,7 @@ export interface LeadFilters {
   followUpTo?: string;
   page?: number;
   limit?: number;
-  sortBy?: 'createdAt' | 'followUpDate' | 'updatedAt' | 'name';
+  sortBy?: 'createdAt' | 'followUpDate' | 'updatedAt' | 'name' | 'enquiryDate';
   sortOrder?: 'asc' | 'desc';
 }
 

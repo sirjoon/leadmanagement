@@ -2,7 +2,12 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { api } from '../api/client';
 
-export type Role = 'SUPER_ADMIN' | 'ADMIN' | 'CLINIC_STAFF';
+export type Role = 'SUPER_ADMIN' | 'ADMIN' | 'LEAD_USER' | 'CLINIC_STAFF';
+
+// Role helper functions
+export const isAdminRole = (role: Role): boolean => role === 'ADMIN' || role === 'SUPER_ADMIN';
+export const isLeadUserRole = (role: Role): boolean => role === 'LEAD_USER';
+export const isClinicStaffRole = (role: Role): boolean => role === 'CLINIC_STAFF';
 
 export interface Clinic {
   id: string;

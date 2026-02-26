@@ -53,9 +53,11 @@ export default function CreateLeadModal({ onClose }: CreateLeadModalProps) {
     phone: '',
     email: '',
     age: '',
+    patientLocation: '',
     source: 'OTHER' as LeadSource,
     treatmentInterest: '',
     clinicId: '',
+    enquiryDate: new Date().toISOString().slice(0, 16), // Default to now
     followUpDate: '',
     nextAction: '',
   });
@@ -82,9 +84,11 @@ export default function CreateLeadModal({ onClose }: CreateLeadModalProps) {
         phone: formData.phone,
         email: formData.email || undefined,
         age: formData.age ? parseInt(formData.age, 10) : undefined,
+        patientLocation: formData.patientLocation || undefined,
         source: formData.source,
         treatmentInterest: formData.treatmentInterest || undefined,
         clinicId: formData.clinicId || undefined,
+        enquiryDate: formData.enquiryDate ? new Date(formData.enquiryDate).toISOString() : undefined,
         followUpDate: formData.followUpDate ? new Date(formData.followUpDate).toISOString() : undefined,
         nextAction: formData.nextAction || undefined,
       });
@@ -202,6 +206,21 @@ export default function CreateLeadModal({ onClose }: CreateLeadModalProps) {
               />
             </div>
 
+            {/* Patient Location */}
+            <div className="sm:col-span-2">
+              <label className="mb-1.5 block text-sm font-medium text-slate-700">
+                Patient Location
+              </label>
+              <input
+                type="text"
+                name="patientLocation"
+                value={formData.patientLocation}
+                onChange={handleChange}
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-dental-500 focus:outline-none focus:ring-2 focus:ring-dental-500/20"
+                placeholder="e.g., Ganapathy, Coimbatore"
+              />
+            </div>
+
             {/* Source */}
             <div>
               <label className="mb-1.5 block text-sm font-medium text-slate-700">
@@ -241,7 +260,7 @@ export default function CreateLeadModal({ onClose }: CreateLeadModalProps) {
               </select>
             </div>
 
-            {/* Clinic (Admin only) */}
+            {/* Clinic */}
             <div>
               <label className="mb-1.5 block text-sm font-medium text-slate-700">
                 Assign to Clinic
@@ -250,8 +269,7 @@ export default function CreateLeadModal({ onClose }: CreateLeadModalProps) {
                 name="clinicId"
                 value={formData.clinicId}
                 onChange={handleChange}
-                disabled={!isAdmin}
-                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-dental-500 focus:outline-none focus:ring-2 focus:ring-dental-500/20 disabled:bg-slate-50"
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-dental-500 focus:outline-none focus:ring-2 focus:ring-dental-500/20"
               >
                 <option value="">Unassigned (TBD)</option>
                 {clinics.map((clinic) => (
@@ -260,6 +278,21 @@ export default function CreateLeadModal({ onClose }: CreateLeadModalProps) {
                   </option>
                 ))}
               </select>
+            </div>
+
+            {/* Enquiry Date */}
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-slate-700">
+                Enquiry Date <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="datetime-local"
+                name="enquiryDate"
+                value={formData.enquiryDate}
+                onChange={handleChange}
+                required
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-dental-500 focus:outline-none focus:ring-2 focus:ring-dental-500/20"
+              />
             </div>
 
             {/* Follow-up Date */}

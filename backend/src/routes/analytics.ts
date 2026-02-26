@@ -15,6 +15,9 @@ const dateRangeSchema = z.object({
 /**
  * GET /analytics/summary
  * High-level KPIs (Admin only)
+ * 
+ * User Story A3: Track Visited, Treatment, Rescheduled, Lost, and DNA statuses
+ * Dashboard available only for Admin
  */
 router.get('/summary', requireRole('ADMIN', 'SUPER_ADMIN'), asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   if (!req.tenant || !req.db) {
@@ -36,25 +39,31 @@ router.get('/summary', requireRole('ADMIN', 'SUPER_ADMIN'), asyncHandler(async (
     ...(clinicId && { clinicId }),
   };
 
-  // Get counts by status
+  // Get counts by status (User Story A3 - track all patient statuses)
   const [
     totalLeads,
     newLeads,
+    attemptingLeads,
     connectedLeads,
     appointmentBooked,
     visited,
     treatmentStarted,
+    rescheduledLeads,
     lostLeads,
+    dnaLeads,      // Did Not Attend (User Story A3)
     dncLeads,
     dnrLeads,
   ] = await Promise.all([
     req.db.lead.count({ where }),
     req.db.lead.count({ where: { ...where, status: 'NEW' } }),
+    req.db.lead.count({ where: { ...where, status: 'ATTEMPTING' } }),
     req.db.lead.count({ where: { ...where, status: 'CONNECTED' } }),
     req.db.lead.count({ where: { ...where, status: 'APPOINTMENT_BOOKED' } }),
     req.db.lead.count({ where: { ...where, status: 'VISITED' } }),
     req.db.lead.count({ where: { ...where, status: 'TREATMENT_STARTED' } }),
+    req.db.lead.count({ where: { ...where, status: 'RESCHEDULED' } }),
     req.db.lead.count({ where: { ...where, status: 'LOST' } }),
+    req.db.lead.count({ where: { ...where, status: 'DNA' } }),
     req.db.lead.count({ where: { ...where, status: 'DNC' } }),
     req.db.lead.count({ where: { ...where, status: 'DNR' } }),
   ]);
@@ -64,9 +73,23 @@ router.get('/summary', requireRole('ADMIN', 'SUPER_ADMIN'), asyncHandler(async (
     where: { ...where, followUpDate: { not: null } },
   });
 
-  // Calculate conversion rate
+  // Get overdue follow-ups (User Story A2 - tracking)
+  const overdueFollowUps = await req.db.lead.count({
+    where: { 
+      ...where, 
+      followUpDate: { lt: new Date() },
+      status: { notIn: ['LOST', 'DNC', 'DNR', 'TREATMENT_STARTED'] },
+    },
+  });
+
+  // Calculate conversion rate (Visited + Treatment Started)
   const conversionRate = totalLeads > 0 
     ? ((visited + treatmentStarted) / totalLeads * 100).toFixed(1) 
+    : '0.0';
+
+  // Calculate drop-off rate (Lost + DNA)
+  const dropOffRate = totalLeads > 0 
+    ? ((lostLeads + dnaLeads) / totalLeads * 100).toFixed(1) 
     : '0.0';
 
   // Calculate follow-up compliance
@@ -78,16 +101,23 @@ router.get('/summary', requireRole('ADMIN', 'SUPER_ADMIN'), asyncHandler(async (
     summary: {
       totalLeads,
       newLeads,
+      attemptingLeads,
       connectedLeads,
       appointmentBooked,
       visited,
       treatmentStarted,
+      rescheduledLeads,
       lostLeads,
+      dnaLeads,
       dncLeads,
       dnrLeads,
       conversionRate: parseFloat(conversionRate),
+      dropOffRate: parseFloat(dropOffRate),
       followUpCompliance: parseFloat(followUpCompliance),
+      overdueFollowUps,
     },
+    // Explicitly note this is admin-only data (User Story A3)
+    accessLevel: 'ADMIN_ONLY',
   });
 }));
 
