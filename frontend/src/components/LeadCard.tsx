@@ -1271,16 +1271,27 @@ export default function LeadCard({ lead, index, onSelect: _onSelect }: LeadCardP
       {showFollowUpModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-2xl animate-in">
-            <div className="mb-4 flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-100">
-                <Calendar className="h-5 w-5 text-amber-600" />
+            {/* Header with close button */}
+            <div className="mb-4 flex items-start justify-between">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-100">
+                  <Calendar className="h-5 w-5 text-amber-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-slate-900">Follow-up Required</h3>
+                  <p className="text-sm text-slate-500">
+                    Status "{pendingStatusChange}" requires a follow-up date
+                  </p>
+                </div>
               </div>
-              <div>
-                <h3 className="text-lg font-semibold text-slate-900">Follow-up Required</h3>
-                <p className="text-sm text-slate-500">
-                  Status "{pendingStatusChange}" requires a follow-up date
-                </p>
-              </div>
+              {/* Close X button */}
+              <button
+                onClick={handleCancelFollowUpModal}
+                className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600"
+                title="Close (status will not change)"
+              >
+                <X className="h-5 w-5" />
+              </button>
             </div>
 
             {followUpError && (
