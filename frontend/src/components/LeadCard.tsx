@@ -35,6 +35,7 @@ const statusColors: Record<LeadStatus, string> = {
   DNA: 'bg-amber-100 text-amber-700 ring-amber-500/20',
   DNC: 'bg-gray-100 text-gray-600 ring-gray-500/20',
   DNR: 'bg-gray-200 text-gray-700 ring-gray-500/20',
+  TWC: 'bg-cyan-100 text-cyan-700 ring-cyan-500/20',
 };
 
 const statusLabels: Record<LeadStatus, string> = {
@@ -49,6 +50,7 @@ const statusLabels: Record<LeadStatus, string> = {
   DNA: 'DNA',
   DNC: 'DNC',
   DNR: 'DNR',
+  TWC: 'TWC',
 };
 
 // Statuses that require mandatory follow-up (User Story L2, L3)
@@ -61,12 +63,12 @@ const STATUSES_REQUIRING_FOLLOWUP: LeadStatus[] = [
 // All statuses for admin, limited for lead users
 const adminStatuses: LeadStatus[] = [
   'NEW', 'ATTEMPTING', 'CONNECTED', 'APPOINTMENT_BOOKED', 'VISITED',
-  'TREATMENT_STARTED', 'RESCHEDULED', 'LOST', 'DNA', 'DNC', 'DNR',
+  'TREATMENT_STARTED', 'RESCHEDULED', 'LOST', 'DNA', 'DNC', 'DNR', 'TWC',
 ];
 
 // Lead User can use these statuses (User Story L3)
 const leadUserStatuses: LeadStatus[] = [
-  'ATTEMPTING', 'VISITED', 'TREATMENT_STARTED', 'RESCHEDULED', 'LOST', 'DNA',
+  'ATTEMPTING', 'VISITED', 'TREATMENT_STARTED', 'RESCHEDULED', 'LOST', 'DNA', 'DNR', 'TWC',
 ];
 
 // Priority styles

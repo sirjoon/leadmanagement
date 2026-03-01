@@ -315,11 +315,15 @@ router.post('/', asyncHandler(async (req: AuthenticatedRequest, res: Response) =
     clinicId = clinic?.id;
   }
 
+  // Auto-assign lead to the creating user if they are a Lead User
+  const assignedUserId = isLeadUser(req.tenant.role) ? req.tenant.userId : undefined;
+
   const lead = await req.db.lead.create({
     data: {
       ...data,
       tenantId: req.tenant.id,
       clinicId,
+      assignedUserId,
       enquiryDate: data.enquiryDate ? new Date(data.enquiryDate) : new Date(),
       followUpDate: data.followUpDate ? new Date(data.followUpDate) : null,
     },
@@ -398,11 +402,11 @@ router.patch('/:id', asyncHandler(async (req: AuthenticatedRequest, res: Respons
       return;
     }
 
-    // Lead users cannot change to DNC/DNR statuses
-    if (data.status === 'DNC' || data.status === 'DNR') {
+    // Lead users cannot change to DNC status (admin-only decision)
+    if (data.status === 'DNC') {
       res.status(403).json({ 
         error: 'Permission denied',
-        message: 'Only administrators can set DNC/DNR status.',
+        message: 'Only administrators can set DNC status.',
         code: 'ADMIN_STATUS_REQUIRED'
       });
       return;

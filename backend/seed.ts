@@ -162,6 +162,42 @@ async function main() {
     });
   }
 
+  // Create sample appointments for Ganapathy clinic
+  console.log('📅 Creating sample appointments...');
+  const ganapathyClinic = createdClinics.find(c => c.slug === 'ganapathy');
+  const allLeads = await prisma.lead.findMany({ where: { tenantId: TENANT_ID }, take: 5 });
+  
+  if (ganapathyClinic && allLeads.length > 0) {
+    const today = new Date();
+    const appointmentTimes = [
+      { hour: 9, minute: 0 },
+      { hour: 10, minute: 30 },
+      { hour: 11, minute: 0 },
+      { hour: 14, minute: 0 },
+      { hour: 15, minute: 30 },
+    ];
+
+    for (let i = 0; i < Math.min(5, allLeads.length); i++) {
+      const lead = allLeads[i];
+      const time = appointmentTimes[i];
+      const scheduledAt = new Date(today.getFullYear(), today.getMonth(), today.getDate(), time.hour, time.minute);
+      
+      await prisma.appointment.upsert({
+        where: { id: `seed-appt-${i}` },
+        update: {},
+        create: {
+          id: `seed-appt-${i}`,
+          leadId: lead.id,
+          clinicId: ganapathyClinic.id,
+          scheduledAt,
+          duration: 30,
+          status: i % 2 === 0 ? 'SCHEDULED' : 'CONFIRMED',
+          notes: `Appointment for ${lead.treatmentInterest || 'consultation'}`,
+        },
+      });
+    }
+  }
+
   console.log('✅ Seeding complete!');
   console.log('\n📧 Login credentials:');
   console.log('   Admin: admin@avmsmiles.in / admin123');

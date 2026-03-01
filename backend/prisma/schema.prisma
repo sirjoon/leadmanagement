@@ -136,6 +136,7 @@ enum LeadStatus {
   DNA             // Did Not Attend
   DNC             // Do Not Contact
   DNR             // Do Not Return
+  TWC             // To Be Called / Will Call Back
 }
 
 enum Priority {

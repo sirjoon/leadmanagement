@@ -12,7 +12,8 @@ export type LeadStatus =
   | 'LOST' 
   | 'DNA'  // Did Not Attend (User Story A3)
   | 'DNC' 
-  | 'DNR';
+  | 'DNR'
+  | 'TWC'; // To Be Called / Will Call Back
 
 export type Priority = 'HOT' | 'WARM' | 'COLD' | 'NEW' | 'APPOINTMENT' | 'VISITED';
 
