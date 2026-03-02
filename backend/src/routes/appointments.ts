@@ -80,6 +80,8 @@ router.get('/today', asyncHandler(async (req: AuthenticatedRequest, res: Respons
           age: true,
           patientLocation: true,
           treatmentInterest: true,
+          treatmentPlan: true,
+          treatmentNotes: true,
           enquiryDate: true,
           source: true,
         },
@@ -174,7 +176,13 @@ router.get('/', asyncHandler(async (req: AuthenticatedRequest, res: Response) =>
           name: true,
           phone: true,
           email: true,
+          age: true,
+          patientLocation: true,
           treatmentInterest: true,
+          treatmentPlan: true,
+          treatmentNotes: true,
+          enquiryDate: true,
+          source: true,
           // Hide lead management fields from clinic staff
           ...(isClinicStaff(req.tenant.role) ? {} : {
             status: true,
@@ -534,6 +542,146 @@ router.patch('/:id', asyncHandler(async (req: AuthenticatedRequest, res: Respons
     appointment,
     message: isReschedule ? 'Appointment rescheduled successfully' : 'Appointment updated successfully',
     isRescheduled: isReschedule,
+  });
+}));
+
+/**
+ * GET /appointments/:id/patient-history
+ * Get full patient history for an appointment (notes + all appointments)
+ * Available to all roles including clinic staff
+ */
+router.get('/:id/patient-history', asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  if (!req.tenant || !req.db) {
+    res.status(401).json({ error: 'Unauthorized' });
+    return;
+  }
+
+  const appointment = await req.db.appointment.findUnique({
+    where: { id: req.params.id },
+    include: { lead: true },
+  });
+
+  if (!appointment) {
+    res.status(404).json({ error: 'Appointment not found' });
+    return;
+  }
+
+  // Clinic staff access check
+  if (isClinicStaff(req.tenant.role) && req.tenant.location) {
+    const clinic = await req.db.clinic.findFirst({
+      where: { tenantId: req.tenant.id, slug: req.tenant.location },
+    });
+    if (clinic && appointment.clinicId !== clinic.id) {
+      res.status(403).json({ error: 'Access denied' });
+      return;
+    }
+  }
+
+  const leadId = appointment.leadId;
+
+  // Fetch notes (hide admin-only from clinic staff)
+  const notes = await req.db.note.findMany({
+    where: {
+      leadId,
+      ...(isClinicStaff(req.tenant.role) && { isAdminOnly: false }),
+    },
+    include: {
+      author: { select: { id: true, name: true, role: true } },
+    },
+    orderBy: { createdAt: 'desc' },
+  });
+
+  // Fetch all appointments for this patient
+  const appointments = await req.db.appointment.findMany({
+    where: { leadId },
+    include: {
+      clinic: { select: { id: true, name: true, slug: true } },
+    },
+    orderBy: { scheduledAt: 'desc' },
+  });
+
+  // Fetch status history
+  const statusHistory = await req.db.leadStatusHistory.findMany({
+    where: { leadId },
+    include: {
+      lead: { select: { id: true, name: true } },
+    },
+    orderBy: { createdAt: 'desc' },
+  });
+
+  res.json({
+    patient: {
+      id: appointment.lead.id,
+      name: appointment.lead.name,
+      phone: appointment.lead.phone,
+      email: appointment.lead.email,
+      age: appointment.lead.age,
+      patientLocation: appointment.lead.patientLocation,
+      treatmentInterest: appointment.lead.treatmentInterest,
+      treatmentPlan: appointment.lead.treatmentPlan,
+      treatmentNotes: appointment.lead.treatmentNotes,
+      enquiryDate: appointment.lead.enquiryDate,
+      source: appointment.lead.source,
+    },
+    notes,
+    appointments,
+    statusHistory,
+  });
+}));
+
+/**
+ * PATCH /appointments/:id/treatment-plan
+ * Update treatment plan for the patient linked to this appointment
+ * Available to clinic staff — this is how they enter treatment details after visit
+ */
+router.patch('/:id/treatment-plan', asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  if (!req.tenant || !req.db) {
+    res.status(401).json({ error: 'Unauthorized' });
+    return;
+  }
+
+  const { treatmentPlan, treatmentNotes } = z.object({
+    treatmentPlan: z.string().optional(),
+    treatmentNotes: z.string().optional(),
+  }).parse(req.body);
+
+  const appointment = await req.db.appointment.findUnique({
+    where: { id: req.params.id },
+  });
+
+  if (!appointment) {
+    res.status(404).json({ error: 'Appointment not found' });
+    return;
+  }
+
+  // Clinic staff access check
+  if (isClinicStaff(req.tenant.role) && req.tenant.location) {
+    const clinic = await req.db.clinic.findFirst({
+      where: { tenantId: req.tenant.id, slug: req.tenant.location },
+    });
+    if (clinic && appointment.clinicId !== clinic.id) {
+      res.status(403).json({ error: 'Access denied' });
+      return;
+    }
+  }
+
+  // Update the lead's treatment plan
+  const lead = await req.db.lead.update({
+    where: { id: appointment.leadId },
+    data: {
+      ...(treatmentPlan !== undefined && { treatmentPlan }),
+      ...(treatmentNotes !== undefined && { treatmentNotes }),
+    },
+    select: {
+      id: true,
+      treatmentPlan: true,
+      treatmentNotes: true,
+    },
+  });
+
+  res.json({
+    lead,
+    message: 'Treatment plan updated successfully',
   });
 }));
 

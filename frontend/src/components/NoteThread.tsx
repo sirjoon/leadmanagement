@@ -4,7 +4,7 @@ import { type Note } from '../store/leadStore';
 import { useAuthStore } from '../store/authStore';
 import { api } from '../api/client';
 import { clsx } from 'clsx';
-import { format, parseISO } from 'date-fns';
+import { formatDateIST } from '../utils/formatDate';
 
 interface NoteThreadProps {
   leadId: string;
@@ -144,7 +144,7 @@ export default function NoteThread({ leadId, notes: initialNotes }: NoteThreadPr
                   )}
                 </div>
                 <span className="text-xs text-slate-400">
-                  {format(parseISO(note.createdAt), 'MMM d, h:mm a')}
+                  {formatDateIST(note.createdAt, 'MMM d, h:mm a')}
                 </span>
               </div>
               <p className="text-sm text-slate-600">{note.content}</p>
