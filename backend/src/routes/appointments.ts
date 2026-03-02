@@ -300,12 +300,39 @@ router.post('/', asyncHandler(async (req: AuthenticatedRequest, res: Response) =
     return;
   }
 
+  // Check for conflicting appointment (same clinic, same date+time)
+  const scheduledDate = new Date(data.scheduledAt);
+  const conflicting = await req.db.appointment.findFirst({
+    where: {
+      clinicId: data.clinicId,
+      scheduledAt: scheduledDate,
+      status: { notIn: ['CANCELLED'] },
+    },
+    include: {
+      lead: { select: { name: true } },
+    },
+  });
+
+  if (conflicting) {
+    res.status(409).json({
+      error: 'Appointment conflict',
+      message: `Another appointment is already scheduled at this time for ${clinic.name}. Patient: ${conflicting.lead.name}. Please choose a different time.`,
+      code: 'APPOINTMENT_CONFLICT',
+      conflictingAppointment: {
+        id: conflicting.id,
+        patientName: conflicting.lead.name,
+        scheduledAt: conflicting.scheduledAt,
+      },
+    });
+    return;
+  }
+
   // Create appointment
   const appointment = await req.db.appointment.create({
     data: {
       leadId: data.leadId,
       clinicId: data.clinicId,
-      scheduledAt: new Date(data.scheduledAt),
+      scheduledAt: scheduledDate,
       duration: data.duration,
       notes: data.notes,
     },
@@ -430,8 +457,33 @@ router.patch('/:id', asyncHandler(async (req: AuthenticatedRequest, res: Respons
   }
 
   // Determine if this is a reschedule (date changed)
-  const isReschedule = data.scheduledAt && 
+  const isReschedule = data.scheduledAt &&
     new Date(data.scheduledAt).getTime() !== existingAppointment.scheduledAt.getTime();
+
+  // Check for conflicting appointment on reschedule
+  if (isReschedule) {
+    const newDate = new Date(data.scheduledAt!);
+    const conflicting = await req.db.appointment.findFirst({
+      where: {
+        clinicId: existingAppointment.clinicId,
+        scheduledAt: newDate,
+        status: { notIn: ['CANCELLED'] },
+        id: { not: req.params.id },
+      },
+      include: {
+        lead: { select: { name: true } },
+      },
+    });
+
+    if (conflicting) {
+      res.status(409).json({
+        error: 'Appointment conflict',
+        message: `Another appointment is already scheduled at this time. Patient: ${conflicting.lead.name}. Please choose a different time.`,
+        code: 'APPOINTMENT_CONFLICT',
+      });
+      return;
+    }
+  }
 
   // Build update data
   const updateData: Record<string, unknown> = {

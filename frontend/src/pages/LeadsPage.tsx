@@ -6,6 +6,7 @@ import {
   AlertCircle,
   RefreshCw
 } from 'lucide-react';
+import { useSearchParams } from 'react-router-dom';
 import { useLeadStore } from '../store/leadStore';
 import { useAuthStore } from '../store/authStore';
 import { clsx } from 'clsx';
@@ -30,16 +31,26 @@ export default function LeadsPage() {
   const { user } = useAuthStore();
   const isAdmin = user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN';
 
+  const [searchParams, setSearchParams] = useSearchParams();
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '');
 
   useEffect(() => {
-    fetchLeads();
+    const urlSearch = searchParams.get('search');
+    if (urlSearch) {
+      setSearchQuery(urlSearch);
+      setFilters({ search: urlSearch, page: 1 });
+      fetchLeads({ search: urlSearch, page: 1 });
+      // Clear URL param after applying
+      setSearchParams({}, { replace: true });
+    } else {
+      fetchLeads();
+    }
     if (isAdmin) {
       fetchTbdLeads();
     }
-  }, [fetchLeads, fetchTbdLeads, isAdmin]);
+  }, []);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();

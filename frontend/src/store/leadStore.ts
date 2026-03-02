@@ -15,7 +15,7 @@ export type LeadStatus =
   | 'DNR'
   | 'TWC'; // To Be Called / Will Call Back
 
-export type Priority = 'HOT' | 'WARM' | 'COLD' | 'NEW' | 'APPOINTMENT' | 'VISITED';
+export type Priority = 'HOT' | 'WARM' | 'COLD';
 
 export type LeadSource = 
   | 'META_ADS' 
@@ -73,6 +73,8 @@ export interface Lead {
   assignedUserId: string | null;  // Lead User assignment
   assignedUser: AssignedUser | null;  // Lead User details
   notes: Note[];
+  treatmentPlan: string | null;
+  treatmentNotes: string | null;
   createdAt: string;
   updatedAt: string;
   _count?: {
@@ -126,7 +128,7 @@ interface LeadState {
 const defaultFilters: LeadFilters = {
   page: 1,
   limit: 20,
-  sortBy: 'createdAt',
+  sortBy: 'updatedAt',
   sortOrder: 'desc',
 };
 

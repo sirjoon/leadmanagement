@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
 import { Calendar, Clock, MapPin, Phone, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { api } from '../api/client';
 import { clsx } from 'clsx';
 import { format, parseISO, startOfWeek, endOfWeek, addWeeks, subWeeks, eachDayOfInterval, isSameDay } from 'date-fns';
+import { formatDateIST } from '../utils/formatDate';
 import { useAuthStore, isClinicStaffRole } from '../store/authStore';
 import StaffDashboard from '../components/StaffDashboard';
 
@@ -47,6 +49,7 @@ export default function AppointmentsPage() {
 }
 
 function AppointmentsCalendar() {
+  const navigate = useNavigate();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [currentWeekStart, setCurrentWeekStart] = useState(startOfWeek(new Date(), { weekStartsOn: 1 }));
@@ -154,14 +157,16 @@ function AppointmentsCalendar() {
                   dayAppointments.map((apt) => (
                     <div
                       key={apt.id}
+                      onClick={() => navigate(`/leads?search=${encodeURIComponent(apt.lead.name)}`)}
                       className={clsx(
-                        'rounded-lg border p-2 text-xs cursor-pointer transition-all hover:shadow-md',
+                        'rounded-lg border p-2 text-xs cursor-pointer transition-all hover:shadow-md hover:ring-2 hover:ring-dental-300',
                         statusColors[apt.status] || 'bg-slate-100 text-slate-700 border-slate-200'
                       )}
+                      title={`Click to view ${apt.lead.name}'s details`}
                     >
                       <div className="flex items-center gap-1 font-semibold">
                         <Clock className="h-3 w-3" />
-                        {format(parseISO(apt.scheduledAt), 'h:mm a')}
+                        {formatDateIST(apt.scheduledAt, 'h:mm a')}
                       </div>
                       <p className="mt-1 font-medium truncate">{apt.lead.name}</p>
                       <p className="text-[10px] opacity-75">{apt.clinic.name}</p>
@@ -189,23 +194,28 @@ function AppointmentsCalendar() {
             appointments
               .sort((a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime())
               .map((apt) => (
-                <div key={apt.id} className="flex items-center gap-4 p-4 hover:bg-slate-50">
+                <div
+                  key={apt.id}
+                  onClick={() => navigate(`/leads?search=${encodeURIComponent(apt.lead.name)}`)}
+                  className="flex items-center gap-4 p-4 hover:bg-slate-50 cursor-pointer transition-colors"
+                  title={`Click to view ${apt.lead.name}'s details`}
+                >
                   <div className="flex-shrink-0">
                     <div className={clsx(
                       'rounded-lg px-3 py-2 text-center',
                       statusColors[apt.status] || 'bg-slate-100'
                     )}>
-                      <p className="text-xs font-medium">{format(parseISO(apt.scheduledAt), 'EEE')}</p>
-                      <p className="text-lg font-bold">{format(parseISO(apt.scheduledAt), 'd')}</p>
+                      <p className="text-xs font-medium">{formatDateIST(apt.scheduledAt, 'EEE')}</p>
+                      <p className="text-lg font-bold">{formatDateIST(apt.scheduledAt, 'd')}</p>
                     </div>
                   </div>
-                  
+
                   <div className="flex-1 min-w-0">
                     <p className="font-semibold text-slate-900">{apt.lead.name}</p>
                     <div className="mt-1 flex flex-wrap items-center gap-3 text-sm text-slate-500">
                       <span className="flex items-center gap-1">
                         <Clock className="h-3.5 w-3.5" />
-                        {format(parseISO(apt.scheduledAt), 'h:mm a')} ({apt.duration} min)
+                        {formatDateIST(apt.scheduledAt, 'h:mm a')} ({apt.duration} min)
                       </span>
                       <span className="flex items-center gap-1">
                         <MapPin className="h-3.5 w-3.5" />

@@ -20,6 +20,7 @@ import { useAuthStore, isAdminRole, isLeadUserRole } from '../store/authStore';
 import { api } from '../api/client';
 import { clsx } from 'clsx';
 import { format, parseISO, isToday, isPast } from 'date-fns';
+import { formatDateIST, formatDateTimeIST, formatDateInputIST } from '../utils/formatDate';
 import NoteThread from './NoteThread';
 
 // Status badge colors
@@ -71,17 +72,14 @@ const leadUserStatuses: LeadStatus[] = [
   'ATTEMPTING', 'VISITED', 'TREATMENT_STARTED', 'RESCHEDULED', 'LOST', 'DNA', 'DNR', 'TWC',
 ];
 
-// Priority styles
-const priorityStyles: Record<Priority, { bg: string; icon: string; label: string }> = {
+// Priority styles — only HOT, WARM, COLD
+const priorityStyles: Record<string, { bg: string; icon: string; label: string }> = {
   HOT: { bg: 'bg-red-500', icon: '🔥', label: 'Hot' },
   WARM: { bg: 'bg-orange-400', icon: '♨️', label: 'Warm' },
   COLD: { bg: 'bg-blue-400', icon: '🧊', label: 'Cold' },
-  NEW: { bg: 'bg-purple-500', icon: '📋', label: 'New' },
-  APPOINTMENT: { bg: 'bg-emerald-500', icon: '📅', label: 'Appointment' },
-  VISITED: { bg: 'bg-green-500', icon: '✅', label: 'Visited' },
 };
 
-const allPriorities: Priority[] = ['HOT', 'WARM', 'COLD', 'NEW', 'APPOINTMENT', 'VISITED'];
+const allPriorities: Priority[] = ['HOT', 'WARM', 'COLD'];
 
 // Source labels
 const sourceLabels: Record<string, string> = {
@@ -169,10 +167,10 @@ export default function LeadCard({ lead, index, onSelect: _onSelect }: LeadCardP
     treatmentInterest: lead.treatmentInterest || '',
     source: lead.source,
     enquiryDate: lead.enquiryDate
-      ? format(parseISO(lead.enquiryDate), "yyyy-MM-dd'T'HH:mm")
+      ? formatDateInputIST(lead.enquiryDate)
       : '',
     followUpDate: lead.followUpDate
-      ? format(parseISO(lead.followUpDate), "yyyy-MM-dd'T'HH:mm")
+      ? formatDateInputIST(lead.followUpDate)
       : '',
     nextAction: lead.nextAction || '',
     clinicId: lead.clinicId || '',
@@ -212,10 +210,10 @@ export default function LeadCard({ lead, index, onSelect: _onSelect }: LeadCardP
       treatmentInterest: lead.treatmentInterest || '',
       source: lead.source,
       enquiryDate: lead.enquiryDate
-        ? format(parseISO(lead.enquiryDate), "yyyy-MM-dd'T'HH:mm")
+        ? formatDateInputIST(lead.enquiryDate)
         : '',
       followUpDate: lead.followUpDate
-        ? format(parseISO(lead.followUpDate), "yyyy-MM-dd'T'HH:mm")
+        ? formatDateInputIST(lead.followUpDate)
         : '',
       nextAction: lead.nextAction || '',
       clinicId: lead.clinicId || '',
@@ -258,7 +256,7 @@ export default function LeadCard({ lead, index, onSelect: _onSelect }: LeadCardP
     return (
       <span className="flex items-center gap-1 rounded-full bg-green-50 px-2 py-0.5 text-xs font-medium text-green-700">
         <Calendar className="h-3 w-3" />
-        {format(date, 'MMM d')}
+        {formatDateIST(lead.followUpDate!, 'MMM d')}
       </span>
     );
   };
@@ -287,7 +285,7 @@ export default function LeadCard({ lead, index, onSelect: _onSelect }: LeadCardP
     return (
       <span className={clsx('flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium', colorClass)}>
         <Clock className="h-3 w-3" />
-        {format(date, 'MMM d')}
+        {formatDateIST(lead.lastContactedAt!, 'MMM d')}
       </span>
     );
   };
@@ -329,10 +327,10 @@ export default function LeadCard({ lead, index, onSelect: _onSelect }: LeadCardP
       treatmentInterest: lead.treatmentInterest || '',
       source: lead.source,
       enquiryDate: lead.enquiryDate
-        ? format(parseISO(lead.enquiryDate), "yyyy-MM-dd'T'HH:mm")
+        ? formatDateInputIST(lead.enquiryDate)
         : '',
       followUpDate: lead.followUpDate
-        ? format(parseISO(lead.followUpDate), "yyyy-MM-dd'T'HH:mm")
+        ? formatDateInputIST(lead.followUpDate)
         : '',
       nextAction: lead.nextAction || '',
       clinicId: lead.clinicId || '',
@@ -368,7 +366,7 @@ export default function LeadCard({ lead, index, onSelect: _onSelect }: LeadCardP
 
       // Handle enquiry date
       const currentEnquiry = lead.enquiryDate
-        ? format(parseISO(lead.enquiryDate), "yyyy-MM-dd'T'HH:mm")
+        ? formatDateInputIST(lead.enquiryDate)
         : '';
       if (editData.enquiryDate !== currentEnquiry) {
         updatePayload.enquiryDate = editData.enquiryDate
@@ -378,7 +376,7 @@ export default function LeadCard({ lead, index, onSelect: _onSelect }: LeadCardP
 
       // Handle follow-up date
       const currentFollowUp = lead.followUpDate
-        ? format(parseISO(lead.followUpDate), "yyyy-MM-dd'T'HH:mm")
+        ? formatDateInputIST(lead.followUpDate)
         : '';
       if (editData.followUpDate !== currentFollowUp) {
         updatePayload.followUpDate = editData.followUpDate
@@ -526,7 +524,7 @@ export default function LeadCard({ lead, index, onSelect: _onSelect }: LeadCardP
         return;
       }
 
-      await api.post('/appointments', {
+      const response = await api.post('/appointments', {
         leadId: lead.id,
         clinicId,
         scheduledAt: new Date(bookingData.scheduledAt).toISOString(),
@@ -534,16 +532,24 @@ export default function LeadCard({ lead, index, onSelect: _onSelect }: LeadCardP
         notes: bookingData.notes || undefined,
       });
 
-      setBookingSuccess(true);
-      setShowBooking(false);
-      setBookingData({ scheduledAt: '', duration: '30', notes: '' });
-      fetchLeadAppointments();
-      await fetchLeads();
+      if (response.status === 201) {
+        setBookingSuccess(true);
+        setShowBooking(false);
+        setBookingData({ scheduledAt: '', duration: '30', notes: '' });
+        fetchLeadAppointments();
+        await fetchLeads();
 
-      // Clear success after 3 seconds
-      setTimeout(() => setBookingSuccess(false), 3000);
-    } catch (err) {
-      setEditError(err instanceof Error ? err.message : 'Failed to book appointment');
+        // Clear success after 3 seconds
+        setTimeout(() => setBookingSuccess(false), 3000);
+      }
+    } catch (err: unknown) {
+      // Handle appointment conflict (409)
+      const axiosError = err as { response?: { status?: number; data?: { message?: string; code?: string } } };
+      if (axiosError?.response?.status === 409) {
+        setEditError(axiosError.response.data?.message || 'Appointment conflict: Another appointment is already scheduled at this time.');
+      } else {
+        setEditError(err instanceof Error ? err.message : 'Failed to book appointment');
+      }
     } finally {
       setIsBooking(false);
     }
@@ -675,10 +681,10 @@ export default function LeadCard({ lead, index, onSelect: _onSelect }: LeadCardP
               <div className="flex items-center gap-1.5">
                 <span className="text-slate-400">Enquiry:</span>
                 <span className="font-medium text-slate-700">
-                  {lead.enquiryDate 
-                    ? format(parseISO(lead.enquiryDate), 'MMM d, yyyy')
+                  {lead.enquiryDate
+                    ? formatDateIST(lead.enquiryDate)
                     : lead.createdAt
-                    ? format(parseISO(lead.createdAt), 'MMM d, yyyy')
+                    ? formatDateIST(lead.createdAt)
                     : 'N/A'
                   }
                 </span>
@@ -693,8 +699,8 @@ export default function LeadCard({ lead, index, onSelect: _onSelect }: LeadCardP
                     ? 'text-amber-600'
                     : 'text-slate-700'
                 )}>
-                  {lead.followUpDate 
-                    ? format(parseISO(lead.followUpDate), 'MMM d, yyyy')
+                  {lead.followUpDate
+                    ? formatDateIST(lead.followUpDate)
                     : 'Not set'
                   }
                 </span>
@@ -987,8 +993,8 @@ export default function LeadCard({ lead, index, onSelect: _onSelect }: LeadCardP
                   <p className="text-xs font-medium uppercase tracking-wide text-slate-400">Enquiry Date</p>
                   <p className="mt-1 text-sm text-slate-900">
                     {lead.enquiryDate
-                      ? format(parseISO(lead.enquiryDate), 'PPP')
-                      : format(parseISO(lead.createdAt), 'PPP')
+                      ? formatDateTimeIST(lead.enquiryDate)
+                      : formatDateTimeIST(lead.createdAt)
                     }
                   </p>
                 </div>
@@ -997,7 +1003,7 @@ export default function LeadCard({ lead, index, onSelect: _onSelect }: LeadCardP
                   <p className="text-xs font-medium uppercase tracking-wide text-slate-400">Follow-up</p>
                   <p className="mt-1 text-sm text-slate-900">
                     {lead.followUpDate
-                      ? format(parseISO(lead.followUpDate), 'PPP')
+                      ? formatDateTimeIST(lead.followUpDate)
                       : 'Not scheduled'
                     }
                   </p>
@@ -1010,7 +1016,7 @@ export default function LeadCard({ lead, index, onSelect: _onSelect }: LeadCardP
                   <p className="text-xs font-medium uppercase tracking-wide text-slate-400">Last Contact</p>
                   <p className="mt-1 text-sm text-slate-900">
                     {lead.lastContactedAt
-                      ? format(parseISO(lead.lastContactedAt), 'PPP')
+                      ? formatDateTimeIST(lead.lastContactedAt)
                       : 'Never'
                     }
                   </p>
@@ -1055,7 +1061,7 @@ export default function LeadCard({ lead, index, onSelect: _onSelect }: LeadCardP
                   <p className="text-xs font-medium uppercase tracking-wide text-slate-400">Follow-up</p>
                   <input
                     type="datetime-local"
-                    value={lead.followUpDate ? format(parseISO(lead.followUpDate), "yyyy-MM-dd'T'HH:mm") : ''}
+                    value={lead.followUpDate ? formatDateInputIST(lead.followUpDate) : ''}
                     onChange={(e) => handleFollowUpChange(e.target.value)}
                     className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-700 focus:border-dental-500 focus:outline-none focus:ring-2 focus:ring-dental-500/20"
                   />
@@ -1112,9 +1118,9 @@ export default function LeadCard({ lead, index, onSelect: _onSelect }: LeadCardP
                     >
                       <div className="flex items-center gap-1.5 font-medium">
                         <Clock className="h-3.5 w-3.5" />
-                        {format(parseISO(apt.scheduledAt), 'MMM d, yyyy')}
+                        {formatDateIST(apt.scheduledAt, 'MMM d, yyyy')}
                         <span className="text-slate-400">at</span>
-                        {format(parseISO(apt.scheduledAt), 'h:mm a')}
+                        {formatDateIST(apt.scheduledAt, 'h:mm a')}
                       </div>
                       <span className="text-xs text-slate-400">({apt.duration} min)</span>
                       <span className={clsx(
@@ -1217,6 +1223,22 @@ export default function LeadCard({ lead, index, onSelect: _onSelect }: LeadCardP
                   </div>
                 </div>
               )}
+            </div>
+          )}
+
+          {/* Treatment Plan section — shown for VISITED / TREATMENT_STARTED leads */}
+          {!isEditing && (lead.status === 'VISITED' || lead.status === 'TREATMENT_STARTED') && (
+            <div className="border-t border-green-100 bg-green-50/30 p-4">
+              <p className="mb-2 flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-green-700">
+                <Check className="h-3.5 w-3.5" />
+                Treatment Plan
+              </p>
+              <TreatmentPlanEditor
+                leadId={lead.id}
+                treatmentPlan={(lead as Lead & { treatmentPlan?: string | null }).treatmentPlan || ''}
+                treatmentNotes={(lead as Lead & { treatmentNotes?: string | null }).treatmentNotes || ''}
+                onSaved={() => fetchLeads()}
+              />
             </div>
           )}
 
@@ -1351,6 +1373,120 @@ export default function LeadCard({ lead, index, onSelect: _onSelect }: LeadCardP
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// Inline treatment plan editor for VISITED leads
+function TreatmentPlanEditor({
+  leadId,
+  treatmentPlan,
+  treatmentNotes,
+  onSaved,
+}: {
+  leadId: string;
+  treatmentPlan: string;
+  treatmentNotes: string;
+  onSaved: () => void;
+}) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [plan, setPlan] = useState(treatmentPlan);
+  const [notes, setNotes] = useState(treatmentNotes);
+  const [isSaving, setIsSaving] = useState(false);
+
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      await api.patch(`/leads/${leadId}`, {
+        treatmentPlan: plan || undefined,
+        treatmentNotes: notes || undefined,
+      });
+      setIsEditing(false);
+      onSaved();
+    } catch {
+      // Silently fail
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  if (!isEditing) {
+    return (
+      <div>
+        {treatmentPlan ? (
+          <div className="space-y-2">
+            <div>
+              <p className="text-xs font-medium text-slate-500">Plan</p>
+              <p className="text-sm text-slate-800 whitespace-pre-wrap">{treatmentPlan}</p>
+            </div>
+            {treatmentNotes && (
+              <div>
+                <p className="text-xs font-medium text-slate-500">Notes</p>
+                <p className="text-sm text-slate-600 whitespace-pre-wrap">{treatmentNotes}</p>
+              </div>
+            )}
+            <button
+              onClick={() => setIsEditing(true)}
+              className="flex items-center gap-1 text-xs font-medium text-green-600 hover:text-green-700"
+            >
+              <Edit2 className="h-3 w-3" />
+              Edit Treatment Plan
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={() => setIsEditing(true)}
+            className="flex items-center gap-1.5 rounded-lg border border-dashed border-green-300 bg-white px-3 py-2 text-xs font-medium text-green-600 hover:bg-green-50 hover:border-green-400"
+          >
+            <Edit2 className="h-3.5 w-3.5" />
+            Add Treatment Plan
+          </button>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3 rounded-lg border border-green-200 bg-white p-3">
+      <div>
+        <label className="mb-1 block text-xs font-medium text-slate-600">Treatment Plan</label>
+        <textarea
+          value={plan}
+          onChange={(e) => setPlan(e.target.value)}
+          rows={3}
+          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-500/20"
+          placeholder="e.g., Full arch implants, braces consultation..."
+        />
+      </div>
+      <div>
+        <label className="mb-1 block text-xs font-medium text-slate-600">Treatment Notes</label>
+        <textarea
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          rows={2}
+          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-500/20"
+          placeholder="Additional notes about the treatment..."
+        />
+      </div>
+      <div className="flex justify-end gap-2">
+        <button
+          onClick={() => { setIsEditing(false); setPlan(treatmentPlan); setNotes(treatmentNotes); }}
+          className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50"
+        >
+          Cancel
+        </button>
+        <button
+          onClick={handleSave}
+          disabled={isSaving}
+          className={clsx(
+            'flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-medium text-white',
+            isSaving ? 'bg-green-400 cursor-not-allowed' : 'bg-green-500 hover:bg-green-600'
+          )}
+        >
+          <Save className="h-3 w-3" />
+          {isSaving ? 'Saving...' : 'Save'}
+        </button>
+      </div>
     </div>
   );
 }

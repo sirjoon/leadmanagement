@@ -46,6 +46,8 @@ const updateLeadSchema = z.object({
   followUpDate: z.string().datetime().nullable().optional(),
   lastContactedAt: z.string().datetime().optional(),
   nextAction: z.string().optional(),
+  treatmentPlan: z.string().nullable().optional(),
+  treatmentNotes: z.string().nullable().optional(),
 });
 
 const leadFiltersSchema = z.object({
@@ -58,7 +60,7 @@ const leadFiltersSchema = z.object({
   followUpTo: z.string().datetime().optional(),
   page: z.coerce.number().int().positive().default(1),
   limit: z.coerce.number().int().positive().max(100).default(20),
-  sortBy: z.enum(['createdAt', 'followUpDate', 'updatedAt', 'name', 'enquiryDate']).default('createdAt'),
+  sortBy: z.enum(['createdAt', 'followUpDate', 'updatedAt', 'name', 'enquiryDate']).default('updatedAt'),
   sortOrder: z.enum(['asc', 'desc']).default('desc'),
 });
 
@@ -485,10 +487,37 @@ router.patch('/:id', asyncHandler(async (req: AuthenticatedRequest, res: Respons
     },
   });
 
-  res.json({ 
+  // Sync appointment status when lead status changes (Task 13)
+  if (data.status && data.status !== existingLead.status) {
+    const latestAppointment = await req.db.appointment.findFirst({
+      where: { leadId: existingLead.id },
+      orderBy: { scheduledAt: 'desc' },
+    });
+
+    if (latestAppointment) {
+      if (data.status === 'VISITED') {
+        await req.db.appointment.update({
+          where: { id: latestAppointment.id },
+          data: { status: 'COMPLETED' },
+        });
+      } else if (data.status === 'RESCHEDULED') {
+        await req.db.appointment.update({
+          where: { id: latestAppointment.id },
+          data: { status: 'RESCHEDULED' },
+        });
+      } else if (data.status === 'DNA') {
+        await req.db.appointment.update({
+          where: { id: latestAppointment.id },
+          data: { status: 'NO_SHOW' },
+        });
+      }
+    }
+  }
+
+  res.json({
     lead,
-    message: data.status && data.status !== existingLead.status 
-      ? `Lead status updated to ${data.status}` 
+    message: data.status && data.status !== existingLead.status
+      ? `Lead status updated to ${data.status}`
       : 'Lead updated successfully',
   });
 }));

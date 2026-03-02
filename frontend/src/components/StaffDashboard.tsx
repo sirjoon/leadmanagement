@@ -4,6 +4,7 @@ import {
   isSameDay, isSameMonth, addMonths, subMonths, startOfWeek, endOfWeek,
   isToday, isBefore, startOfDay, endOfDay,
 } from 'date-fns';
+import { formatDateIST, formatDateTimeIST, formatDateInputIST } from '../utils/formatDate';
 import {
   Calendar,
   Clock,
@@ -196,7 +197,7 @@ export default function StaffDashboard() {
   const openRescheduleModal = (appointment: Appointment) => {
     setRescheduleModal(appointment);
     setRescheduleData({
-      scheduledAt: format(parseISO(appointment.scheduledAt), "yyyy-MM-dd'T'HH:mm"),
+      scheduledAt: formatDateInputIST(appointment.scheduledAt),
       reason: '',
     });
   };
@@ -381,10 +382,10 @@ export default function StaffDashboard() {
                       {/* Time */}
                       <div className="w-20 flex-shrink-0 text-center">
                         <p className="text-lg font-bold text-slate-900">
-                          {format(parseISO(apt.scheduledAt), 'hh:mm')}
+                          {formatDateIST(apt.scheduledAt, 'hh:mm')}
                         </p>
                         <p className="text-xs text-slate-500">
-                          {format(parseISO(apt.scheduledAt), 'a')} &middot; {apt.duration}m
+                          {formatDateIST(apt.scheduledAt, 'a')} &middot; {apt.duration}m
                         </p>
                       </div>
 
@@ -463,7 +464,7 @@ export default function StaffDashboard() {
                               {apt.lead.enquiryDate && (
                                 <p className="text-slate-700">
                                   <span className="text-slate-500">Enquiry:</span>{' '}
-                                  {format(parseISO(apt.lead.enquiryDate), 'MMM d, yyyy')}
+                                  {formatDateIST(apt.lead.enquiryDate, 'MMM d, yyyy')}
                                 </p>
                               )}
                               {apt.lead.treatmentInterest && (
@@ -561,7 +562,7 @@ export default function StaffDashboard() {
             <h3 className="font-display text-lg font-bold text-slate-900">Reschedule Appointment</h3>
             <p className="mt-1 text-sm text-slate-500">
               {rescheduleModal.lead.name} &mdash; Currently{' '}
-              {format(parseISO(rescheduleModal.scheduledAt), 'MMM d, yyyy hh:mm a')}
+              {formatDateTimeIST(rescheduleModal.scheduledAt)}
             </p>
 
             <div className="mt-4 space-y-4">

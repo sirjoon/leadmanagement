@@ -29,7 +29,6 @@ const priorities: { value: Priority; label: string; icon: string }[] = [
   { value: 'HOT', label: 'Hot', icon: '🔥' },
   { value: 'WARM', label: 'Warm', icon: '♨️' },
   { value: 'COLD', label: 'Cold', icon: '🧊' },
-  { value: 'NEW', label: 'New', icon: '📋' },
 ];
 
 const sources: { value: LeadSource; label: string }[] = [
@@ -207,7 +206,7 @@ export default function FilterPanel({ onClose }: FilterPanelProps) {
           <label className="mb-2 block text-sm font-medium text-slate-700">Sort By</label>
           <div className="flex gap-2">
             <select
-              value={localFilters.sortBy || 'createdAt'}
+              value={localFilters.sortBy || 'updatedAt'}
               onChange={(e) => setLocalFilters((prev) => ({
                 ...prev,
                 sortBy: e.target.value as typeof filters.sortBy,
