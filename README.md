@@ -7,7 +7,7 @@ A modern, enterprise-grade lead management platform built for dental clinic fran
 DentraCRM is a B2B SaaS platform that helps dental franchise groups manage patient leads across multiple clinic locations. It features:
 
 - **Multi-tenant architecture** - Path-based routing with database isolation per tenant
-- **Role-based access control** - Super Admin, Admin, and Clinic Staff roles
+- **Role-based access control** - Super Admin, Admin, Lead User, and Clinic Staff roles
 - **Lead lifecycle management** - From first contact to treatment completion
 - **Notes & follow-ups** - Built-in CRM functionality with admin-only visibility options
 - **Analytics dashboard** - Conversion funnels, clinic performance, source attribution
@@ -65,6 +65,7 @@ npx ts-node scripts/seed.ts
 | Role | Email | Password |
 |------|-------|----------|
 | Admin | admin@avmsmiles.in | admin123 |
+| Lead User | lead@avmsmiles.in | admin123 |
 | Clinic Staff | staff.ganapathy@avmsmiles.in | admin123 |
 
 **Tenant ID:** `avmsmiles`
@@ -112,9 +113,12 @@ dentacrm/
 - **HTTP:** Axios
 
 ### Infrastructure
-- **Database:** PostgreSQL (Neon for production)
-- **Container Orchestration:** Docker / Kubernetes
-- **Reverse Proxy:** NGINX
+- **Database:** PostgreSQL (RDS free tier for production)
+- **Compute:** EC2 t4g.small (ARM/Graviton, Mumbai)
+- **Container:** Docker Compose
+- **Reverse Proxy:** NGINX + Let's Encrypt SSL
+- **IaC:** Terraform (state in S3)
+- **Backups:** Daily Excel export to S3 + RDS automated snapshots
 
 ## 🔐 Authentication
 
@@ -124,21 +128,21 @@ The platform uses JWT-based authentication with tenant isolation:
 2. Server validates credentials and issues JWT containing:
    - `sub`: User ID
    - `tenant_id`: Tenant identifier
-   - `role`: User role (SUPER_ADMIN, ADMIN, CLINIC_STAFF)
+   - `role`: User role (SUPER_ADMIN, ADMIN, LEAD_USER, CLINIC_STAFF)
    - `location`: Clinic slug (for clinic staff)
 3. All API requests include JWT and X-Tenant-ID header
 4. Middleware validates that JWT tenant matches header
 
 ## 👥 User Roles
 
-| Permission | Super Admin | Admin | Clinic Staff |
-|------------|-------------|-------|--------------|
-| View all leads | ✅ | ✅ | Own clinic only |
-| View DNC/DNR | ✅ | ✅ | ❌ |
-| Assign leads | ✅ | ✅ | ❌ |
-| User management | ✅ | ✅ | ❌ |
-| Analytics | ✅ | ✅ | ❌ |
-| Export data | ✅ | ✅ | ❌ |
+| Permission | Super Admin | Admin | Lead User | Clinic Staff |
+|------------|-------------|-------|-----------|--------------|
+| View all leads | ✅ | ✅ | Assigned only | Own clinic only |
+| View DNC/DNR | ✅ | ✅ | ❌ | ❌ |
+| Assign leads | ✅ | ✅ | ❌ | ❌ |
+| User management | ✅ | ✅ | ❌ | ❌ |
+| Analytics | ✅ | ✅ | ❌ | ❌ |
+| Export data | ✅ | ✅ | ❌ | ❌ |
 
 ## 📊 API Endpoints
 

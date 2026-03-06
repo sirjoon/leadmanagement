@@ -1,0 +1,87 @@
+version: '3.8'
+
+services:
+  # ── NGINX Reverse Proxy + SSL ─────────────────────────────
+  nginx:
+    image: nginx:alpine
+    container_name: dentacrm-nginx
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.prod.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./certbot/conf:/etc/letsencrypt:ro
+      - ./certbot/www:/var/www/certbot:ro
+    depends_on:
+      - api
+      - frontend
+    networks:
+      - dentacrm-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # ── Certbot (SSL) ─────────────────────────────────────────
+  certbot:
+    image: certbot/certbot
+    container_name: dentacrm-certbot
+    volumes:
+      - ./certbot/conf:/etc/letsencrypt
+      - ./certbot/www:/var/www/certbot
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew --deploy-hook \"docker exec dentacrm-nginx nginx -s reload\" 2>/dev/null; sleep 12h & wait $${!}; done;'"
+    depends_on:
+      - nginx
+    networks:
+      - dentacrm-net
+
+  # ── Backend API ────────────────────────────────────────────
+  api:
+    image: 675045716724.dkr.ecr.ap-south-1.amazonaws.com/dentacrm-api:latest
+    container_name: dentacrm-api
+    restart: always
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DATABASE_URL: ${DATABASE_URL}
+      PLATFORM_DATABASE_URL: ${PLATFORM_DATABASE_URL}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRY: ${JWT_EXPIRY:-24h}
+      FRONTEND_URL: https://magiccrm.geekzlabs.com
+    expose:
+      - "3000"
+    networks:
+      - dentacrm-net
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '1.0'
+
+  # ── Frontend ───────────────────────────────────────────────
+  frontend:
+    image: 675045716724.dkr.ecr.ap-south-1.amazonaws.com/dentacrm-frontend:latest
+    container_name: dentacrm-frontend
+    restart: always
+    expose:
+      - "80"
+    networks:
+      - dentacrm-net
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+          cpus: '0.5'
+
+networks:
+  dentacrm-net:
+    driver: bridge
+    name: dentacrm-net
+

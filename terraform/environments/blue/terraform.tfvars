@@ -1,0 +1,13 @@
+cluster_name        = "dentacrm-blue"
+environment         = "blue"
+aws_region          = "ap-south-1"
+route53_zone_id     = "Z01213603PUH8MLSQUY6J"
+domain              = "geekzlabs.com"
+kubernetes_version  = "1.31"
+node_instance_types = ["t3.medium"]
+node_desired_size   = 1
+node_max_size       = 1
+node_min_size       = 1
+vpc_cidr            = "10.1.0.0/16"
+enable_vpc_cni      = false # Calico manages CNI, VPC CNI addon not installed
+create_node_group   = true  # Create node group

@@ -36,3 +36,17 @@ coverage/
 # Prisma
 *.db
 *.db-journal
+
+# Terraform
+terraform/environments/*/.terraform/
+terraform/environments/*/.terraform.lock.hcl
+terraform/environments/*/terraform.tfstate*
+terraform/environments/*/*.pem
+*.tfstate
+*.tfstate.backup
+
+# SSL certs
+certbot/
+
+# Claude
+.claude/
