@@ -317,8 +317,17 @@ router.post('/', asyncHandler(async (req: AuthenticatedRequest, res: Response) =
     clinicId = clinic?.id;
   }
 
-  // Auto-assign lead to the creating user if they are a Lead User
-  const assignedUserId = isLeadUser(req.tenant.role) ? req.tenant.userId : undefined;
+  // Auto-assign lead: to creating user if Lead User, or to first Lead User if Admin creates
+  let assignedUserId: string | undefined;
+  if (isLeadUser(req.tenant.role)) {
+    assignedUserId = req.tenant.userId;
+  } else if (isAdminUser(req.tenant.role)) {
+    const leadUser = await req.db.user.findFirst({
+      where: { tenantId: req.tenant.id, role: 'LEAD_USER', isActive: true },
+      select: { id: true },
+    });
+    assignedUserId = leadUser?.id;
+  }
 
   const lead = await req.db.lead.create({
     data: {
