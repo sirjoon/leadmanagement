@@ -346,154 +346,8 @@ export default function StaffDashboard() {
     );
   }
 
-  // Today's appointments for summary
-  const todayAppointments = allAppointments
-    .filter((apt) => isSameDay(parseISO(apt.scheduledAt), new Date()))
-    .sort((a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime());
-
-  const todayStats = {
-    total: todayAppointments.length,
-    scheduled: todayAppointments.filter((a) => a.status === 'SCHEDULED').length,
-    confirmed: todayAppointments.filter((a) => a.status === 'CONFIRMED').length,
-    completed: todayAppointments.filter((a) => a.status === 'COMPLETED').length,
-    noShow: todayAppointments.filter((a) => a.status === 'NO_SHOW').length,
-    upcoming: todayAppointments.filter(
-      (a) => ['SCHEDULED', 'CONFIRMED'].includes(a.status) && new Date(a.scheduledAt) >= new Date()
-    ).length,
-  };
-
-  const nextAppointment = todayAppointments.find(
-    (a) => ['SCHEDULED', 'CONFIRMED'].includes(a.status) && new Date(a.scheduledAt) >= new Date()
-  );
-
   return (
     <div className="space-y-6">
-      {/* Today's Summary Banner */}
-      {!loading && (
-        <div className="rounded-xl border border-dental-200 bg-gradient-to-r from-dental-50 to-white p-5">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="font-display text-xl font-bold text-slate-900">
-                Today's Summary
-              </h1>
-              <p className="text-sm text-slate-500">{format(new Date(), 'EEEE, MMMM d, yyyy')}</p>
-            </div>
-            <button
-              onClick={fetchAppointments}
-              disabled={loading}
-              className="flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
-            >
-              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
-              Refresh
-            </button>
-          </div>
-
-          {todayAppointments.length === 0 ? (
-            <div className="mt-4 flex items-center gap-3 rounded-lg bg-white/60 p-4">
-              <Calendar className="h-8 w-8 text-slate-300" />
-              <p className="text-sm text-slate-500">No appointments scheduled for today.</p>
-            </div>
-          ) : (
-            <>
-              {/* Stats cards */}
-              <div className="mt-4 grid grid-cols-3 gap-3 sm:grid-cols-6">
-                <div className="rounded-lg bg-white p-3 text-center shadow-sm">
-                  <p className="text-2xl font-bold text-slate-900">{todayStats.total}</p>
-                  <p className="text-[11px] font-medium text-slate-500">Total</p>
-                </div>
-                <div className="rounded-lg bg-white p-3 text-center shadow-sm">
-                  <p className="text-2xl font-bold text-blue-600">{todayStats.upcoming}</p>
-                  <p className="text-[11px] font-medium text-blue-600">Upcoming</p>
-                </div>
-                <div className="rounded-lg bg-white p-3 text-center shadow-sm">
-                  <p className="text-2xl font-bold text-blue-600">{todayStats.scheduled}</p>
-                  <p className="text-[11px] font-medium text-blue-600">Scheduled</p>
-                </div>
-                <div className="rounded-lg bg-white p-3 text-center shadow-sm">
-                  <p className="text-2xl font-bold text-green-600">{todayStats.confirmed}</p>
-                  <p className="text-[11px] font-medium text-green-600">Confirmed</p>
-                </div>
-                <div className="rounded-lg bg-white p-3 text-center shadow-sm">
-                  <p className="text-2xl font-bold text-emerald-600">{todayStats.completed}</p>
-                  <p className="text-[11px] font-medium text-emerald-600">Completed</p>
-                </div>
-                <div className="rounded-lg bg-white p-3 text-center shadow-sm">
-                  <p className="text-2xl font-bold text-red-600">{todayStats.noShow}</p>
-                  <p className="text-[11px] font-medium text-red-600">No Show</p>
-                </div>
-              </div>
-
-              {/* Next upcoming appointment highlight */}
-              {nextAppointment && (
-                <div className="mt-3 flex items-center gap-3 rounded-lg border border-dental-200 bg-white p-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-dental-100">
-                    <Clock className="h-5 w-5 text-dental-600" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-xs font-medium text-dental-600">Next Appointment</p>
-                    <p className="font-semibold text-slate-900">{nextAppointment.lead.name}</p>
-                    <p className="text-xs text-slate-500">
-                      {formatDateIST(nextAppointment.scheduledAt, 'h:mm a')} &middot; {nextAppointment.duration}min
-                      {nextAppointment.lead.treatmentInterest && ` &middot; ${nextAppointment.lead.treatmentInterest}`}
-                    </p>
-                  </div>
-                  <a
-                    href={`tel:${nextAppointment.lead.phone}`}
-                    className="flex items-center gap-1 rounded-lg bg-dental-500 px-3 py-2 text-xs font-medium text-white hover:bg-dental-600"
-                  >
-                    <Phone className="h-3.5 w-3.5" />
-                    Call
-                  </a>
-                </div>
-              )}
-
-              {/* Quick list of today's appointments */}
-              <div className="mt-3 space-y-1.5">
-                <p className="text-xs font-medium uppercase tracking-wide text-slate-400">Today's Schedule</p>
-                <div className="max-h-48 space-y-1 overflow-y-auto">
-                  {todayAppointments.map((apt) => {
-                    const config = statusConfig[apt.status];
-                    const StatusIcon = config.icon;
-                    const isPast = new Date(apt.scheduledAt) < new Date();
-                    return (
-                      <div
-                        key={`today-${apt.id}`}
-                        onClick={() => {
-                          setSelectedDate(new Date());
-                          setActiveTab('appointments');
-                          setExpandedId(apt.id);
-                        }}
-                        className={clsx(
-                          'flex cursor-pointer items-center gap-3 rounded-lg bg-white px-3 py-2 transition-all hover:shadow-sm',
-                          isPast && !['COMPLETED', 'NO_SHOW'].includes(apt.status) && 'opacity-60'
-                        )}
-                      >
-                        <span className="w-14 text-right text-sm font-medium text-slate-700">
-                          {formatDateIST(apt.scheduledAt, 'h:mm a')}
-                        </span>
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate text-sm font-medium text-slate-900">{apt.lead.name}</p>
-                          {apt.lead.treatmentInterest && (
-                            <p className="truncate text-[11px] text-slate-400">{apt.lead.treatmentInterest}</p>
-                          )}
-                        </div>
-                        <span className={clsx(
-                          'flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold',
-                          config.bgColor, config.color
-                        )}>
-                          <StatusIcon className="h-3 w-3" />
-                          {config.label}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </>
-          )}
-        </div>
-      )}
-
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -515,6 +369,14 @@ export default function StaffDashboard() {
             )}
           </p>
         </div>
+        <button
+          onClick={fetchAppointments}
+          disabled={loading}
+          className="flex items-center gap-2 rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+        >
+          {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+          Refresh
+        </button>
       </div>
 
       {/* Tab switcher */}

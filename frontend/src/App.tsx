@@ -9,6 +9,7 @@ import UsersPage from './pages/UsersPage';
 import AppointmentsPage from './pages/AppointmentsPage';
 import SettingsPage from './pages/SettingsPage';
 import ReportsPage from './pages/ReportsPage';
+import StaffSummaryPage from './pages/StaffSummaryPage';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuthStore();
@@ -87,7 +88,7 @@ function App() {
   const isStaff = user ? isClinicStaffRole(user.role) : false;
   
   // Determine default route based on role (User Story C1, C4)
-  const defaultRoute = isStaff ? '/appointments' : '/leads';
+  const defaultRoute = isStaff ? '/summary' : '/leads';
 
   return (
     <Routes>
@@ -117,6 +118,9 @@ function App() {
                   </LeadAccessRoute>
                 } />
                 
+                {/* Staff Summary - Staff landing page */}
+                <Route path="/summary" element={<StaffSummaryPage />} />
+
                 {/* Appointments - All roles (User Story C1) */}
                 <Route path="/appointments" element={<AppointmentsPage />} />
                 

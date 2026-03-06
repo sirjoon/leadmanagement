@@ -10,7 +10,8 @@ import {
   UserCircle,
   ChevronDown,
   Building2,
-  FileText
+  FileText,
+  LayoutDashboard
 } from 'lucide-react';
 import { useState } from 'react';
 import { useAuthStore, isAdminRole, isClinicStaffRole, isLeadUserRole, Role } from '../store/authStore';
@@ -33,7 +34,7 @@ interface LayoutProps {
  * User Story A1: Admin sees all items
  * User Story L1: Lead users see leads and appointments
  */
-type NavItemAccess = 'all' | 'admin' | 'lead_access';
+type NavItemAccess = 'all' | 'admin' | 'lead_access' | 'staff';
 
 interface NavItem {
   path: string;
@@ -43,6 +44,7 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
+  { path: '/summary', label: 'Summary', icon: LayoutDashboard, access: 'staff' },
   { path: '/leads', label: 'Leads', icon: Users, access: 'lead_access' },
   { path: '/appointments', label: 'Appointments', icon: Calendar, access: 'all' },
   { path: '/analytics', label: 'Analytics', icon: BarChart3, access: 'admin' },
@@ -58,6 +60,7 @@ const canAccessNavItem = (role: Role, access: NavItemAccess): boolean => {
   if (access === 'all') return true;
   if (access === 'admin') return isAdminRole(role);
   if (access === 'lead_access') return isAdminRole(role) || isLeadUserRole(role);
+  if (access === 'staff') return isClinicStaffRole(role);
   return false;
 };
 

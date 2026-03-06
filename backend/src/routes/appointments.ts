@@ -113,9 +113,128 @@ router.get('/today', asyncHandler(async (req: AuthenticatedRequest, res: Respons
 }));
 
 /**
+ * GET /appointments/staff-summary
+ * Summary dashboard data for clinic staff - today, upcoming, this week stats
+ */
+router.get('/staff-summary', asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  if (!req.tenant || !req.db) {
+    res.status(401).json({ error: 'Unauthorized' });
+    return;
+  }
+
+  const now = new Date();
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+  const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+
+  // This week (Mon-Sun)
+  const dayOfWeek = now.getDay();
+  const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+  const startOfWeek = new Date(now.getFullYear(), now.getMonth(), now.getDate() + mondayOffset, 0, 0, 0);
+  const endOfWeek = new Date(startOfWeek);
+  endOfWeek.setDate(endOfWeek.getDate() + 6);
+  endOfWeek.setHours(23, 59, 59);
+
+  // This month
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+
+  // Base where clause
+  const baseWhere: Record<string, unknown> = {
+    lead: { tenantId: req.tenant.id, deletedAt: null },
+  };
+
+  // Scope to clinic for staff
+  if (isClinicStaff(req.tenant.role) && req.tenant.location) {
+    const clinic = await req.db.clinic.findFirst({
+      where: { tenantId: req.tenant.id, slug: req.tenant.location },
+    });
+    if (clinic) {
+      baseWhere.clinicId = clinic.id;
+    } else {
+      res.json({ today: { appointments: [], stats: { total: 0 } }, week: { stats: { total: 0 } }, month: { stats: { total: 0 } } });
+      return;
+    }
+  }
+
+  // Today's appointments
+  const todayAppointments = await req.db.appointment.findMany({
+    where: { ...baseWhere, scheduledAt: { gte: startOfToday, lte: endOfToday } },
+    include: {
+      lead: {
+        select: { id: true, name: true, phone: true, age: true, treatmentInterest: true, treatmentPlan: true, source: true, patientLocation: true },
+      },
+      clinic: { select: { id: true, name: true, slug: true } },
+    },
+    orderBy: { scheduledAt: 'asc' },
+  });
+
+  // Week stats (counts only)
+  const weekAppointments = await req.db.appointment.findMany({
+    where: { ...baseWhere, scheduledAt: { gte: startOfWeek, lte: endOfWeek } },
+    select: { status: true, scheduledAt: true },
+  });
+
+  // Month stats (counts only)
+  const monthAppointments = await req.db.appointment.findMany({
+    where: { ...baseWhere, scheduledAt: { gte: startOfMonth, lte: endOfMonth } },
+    select: { status: true },
+  });
+
+  // Upcoming (next 7 days, excluding today)
+  const startOfTomorrow = new Date(startOfToday);
+  startOfTomorrow.setDate(startOfTomorrow.getDate() + 1);
+  const endOfNext7 = new Date(startOfToday);
+  endOfNext7.setDate(endOfNext7.getDate() + 7);
+  endOfNext7.setHours(23, 59, 59);
+
+  const upcomingAppointments = await req.db.appointment.findMany({
+    where: { ...baseWhere, scheduledAt: { gte: startOfTomorrow, lte: endOfNext7 }, status: { in: ['SCHEDULED', 'CONFIRMED'] } },
+    include: {
+      lead: { select: { id: true, name: true, phone: true, treatmentInterest: true } },
+      clinic: { select: { id: true, name: true, slug: true } },
+    },
+    orderBy: { scheduledAt: 'asc' },
+    take: 10,
+  });
+
+  const calcStats = (appts: { status: string }[]) => ({
+    total: appts.length,
+    scheduled: appts.filter(a => a.status === 'SCHEDULED').length,
+    confirmed: appts.filter(a => a.status === 'CONFIRMED').length,
+    completed: appts.filter(a => a.status === 'COMPLETED').length,
+    noShow: appts.filter(a => a.status === 'NO_SHOW').length,
+    cancelled: appts.filter(a => a.status === 'CANCELLED').length,
+    rescheduled: appts.filter(a => a.status === 'RESCHEDULED').length,
+    dnr: appts.filter(a => a.status === 'DNR').length,
+    twc: appts.filter(a => a.status === 'TWC').length,
+  });
+
+  // Week by day breakdown
+  const weekByDay: { date: string; total: number; completed: number }[] = [];
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(startOfWeek);
+    d.setDate(d.getDate() + i);
+    const dayStr = d.toISOString().split('T')[0];
+    const dayAppts = weekAppointments.filter(a => a.scheduledAt.toISOString().split('T')[0] === dayStr);
+    weekByDay.push({
+      date: dayStr,
+      total: dayAppts.length,
+      completed: dayAppts.filter(a => a.status === 'COMPLETED').length,
+    });
+  }
+
+  res.json({
+    today: { appointments: todayAppointments, stats: calcStats(todayAppointments) },
+    week: { stats: calcStats(weekAppointments), byDay: weekByDay },
+    month: { stats: calcStats(monthAppointments) },
+    upcoming: upcomingAppointments,
+  });
+}));
+
+/**
  * GET /appointments
  * List appointments with filtering
- * 
+ *
  * Role-based access (User Story C1, C2):
  * - ADMIN: Can view all appointments across all clinics
  * - LEAD_USER: Can view appointments for their assigned leads
