@@ -14,6 +14,8 @@ import {
   CalendarPlus,
   Check,
   Trash2,
+  RefreshCw,
+  Loader2,
 } from 'lucide-react';
 import { type Lead, type LeadStatus, type Priority, type LeadSource, useLeadStore } from '../store/leadStore';
 import { useAuthStore, isAdminRole, isLeadUserRole } from '../store/authStore';
@@ -145,6 +147,9 @@ export default function LeadCard({ lead, index, onSelect: _onSelect }: LeadCardP
   }>>([]);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [rescheduleModal, setRescheduleModal] = useState<{ id: string; scheduledAt: string } | null>(null);
+  const [rescheduleData, setRescheduleData] = useState({ scheduledAt: '', reason: '' });
+  const [isRescheduling, setIsRescheduling] = useState(false);
   
   // Mandatory follow-up modal state (User Story L2)
   const [showFollowUpModal, setShowFollowUpModal] = useState(false);
@@ -552,6 +557,24 @@ export default function LeadCard({ lead, index, onSelect: _onSelect }: LeadCardP
       }
     } finally {
       setIsBooking(false);
+    }
+  };
+
+  const handleReschedule = async () => {
+    if (!rescheduleModal || !rescheduleData.scheduledAt) return;
+    setIsRescheduling(true);
+    try {
+      await api.patch(`/appointments/${rescheduleModal.id}`, {
+        scheduledAt: new Date(rescheduleData.scheduledAt).toISOString(),
+        rescheduleReason: rescheduleData.reason || undefined,
+      });
+      setRescheduleModal(null);
+      setRescheduleData({ scheduledAt: '', reason: '' });
+      fetchLeadAppointments();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to reschedule');
+    } finally {
+      setIsRescheduling(false);
     }
   };
 
@@ -1134,8 +1157,75 @@ export default function LeadCard({ lead, index, onSelect: _onSelect }: LeadCardP
                       )}>
                         {apt.status.replace('_', ' ')}
                       </span>
+                      {['SCHEDULED', 'CONFIRMED', 'RESCHEDULED'].includes(apt.status) && (
+                        <button
+                          onClick={() => {
+                            setRescheduleModal({ id: apt.id, scheduledAt: apt.scheduledAt });
+                            setRescheduleData({
+                              scheduledAt: formatDateInputIST(apt.scheduledAt),
+                              reason: '',
+                            });
+                          }}
+                          className="ml-1 rounded p-1 text-slate-400 hover:bg-amber-50 hover:text-amber-600"
+                          title="Reschedule"
+                        >
+                          <RefreshCw className="h-3.5 w-3.5" />
+                        </button>
+                      )}
                     </div>
                   ))}
+                </div>
+              )}
+
+              {/* Reschedule Modal */}
+              {rescheduleModal && (
+                <div className="mb-3 rounded-lg border border-amber-200 bg-amber-50 p-3">
+                  <div className="mb-3 flex items-center justify-between">
+                    <p className="text-sm font-semibold text-amber-800">Reschedule Appointment</p>
+                    <button
+                      onClick={() => { setRescheduleModal(null); setRescheduleData({ scheduledAt: '', reason: '' }); }}
+                      className="rounded p-1 text-amber-400 hover:bg-amber-100 hover:text-amber-600"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                  <div className="space-y-3">
+                    <div>
+                      <label className="mb-1 block text-xs font-medium text-slate-600">New Date & Time <span className="text-red-500">*</span></label>
+                      <input
+                        type="datetime-local"
+                        value={rescheduleData.scheduledAt}
+                        onChange={(e) => setRescheduleData((prev) => ({ ...prev, scheduledAt: e.target.value }))}
+                        className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500/20"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-xs font-medium text-slate-600">Reason (Optional)</label>
+                      <input
+                        type="text"
+                        value={rescheduleData.reason}
+                        onChange={(e) => setRescheduleData((prev) => ({ ...prev, reason: e.target.value }))}
+                        placeholder="Why is this being rescheduled?"
+                        className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500/20"
+                      />
+                    </div>
+                    <div className="flex justify-end gap-2">
+                      <button
+                        onClick={() => { setRescheduleModal(null); setRescheduleData({ scheduledAt: '', reason: '' }); }}
+                        className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={handleReschedule}
+                        disabled={!rescheduleData.scheduledAt || isRescheduling}
+                        className="flex items-center gap-1.5 rounded-lg bg-amber-500 px-3 py-1.5 text-xs font-medium text-white hover:bg-amber-600 disabled:opacity-50"
+                      >
+                        {isRescheduling ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
+                        Reschedule
+                      </button>
+                    </div>
+                  </div>
                 </div>
               )}
 
