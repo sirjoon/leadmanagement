@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
-import { Calendar, Clock, MapPin, Phone, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Calendar, Clock, MapPin, Phone, ChevronLeft, ChevronRight, RefreshCw, Loader2, MessageSquare } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../api/client';
 import { clsx } from 'clsx';
 import { format, parseISO, startOfWeek, endOfWeek, addWeeks, subWeeks, eachDayOfInterval, isSameDay } from 'date-fns';
+import { formatDateInputIST } from '../utils/formatDate';
 import { formatDateIST } from '../utils/formatDate';
 import { useAuthStore, isClinicStaffRole } from '../store/authStore';
 import StaffDashboard from '../components/StaffDashboard';
@@ -48,18 +49,43 @@ export default function AppointmentsPage() {
   return <AppointmentsCalendar />;
 }
 
+const extractRescheduleReason = (notes: string | null): string | null => {
+  if (!notes) return null;
+  // Get the last reschedule reason (most recent)
+  const matches = [...notes.matchAll(/\[Reschedule Reason: (.+?)\]/g)];
+  return matches.length > 0 ? matches[matches.length - 1][1] : null;
+};
+
+const statusFilterOptions = [
+  { value: '', label: 'All' },
+  { value: 'SCHEDULED', label: 'Scheduled' },
+  { value: 'CONFIRMED', label: 'Confirmed' },
+  { value: 'RESCHEDULED', label: 'Rescheduled' },
+  { value: 'COMPLETED', label: 'Completed' },
+  { value: 'NO_SHOW', label: 'No Show' },
+  { value: 'DNR', label: 'DNR' },
+  { value: 'TWC', label: 'TWC' },
+  { value: 'CANCELLED', label: 'Cancelled' },
+];
+
 function AppointmentsCalendar() {
   const navigate = useNavigate();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [currentWeekStart, setCurrentWeekStart] = useState(startOfWeek(new Date(), { weekStartsOn: 1 }));
+  const [statusFilter, setStatusFilter] = useState('');
+
+  // Reschedule state
+  const [rescheduleModal, setRescheduleModal] = useState<Appointment | null>(null);
+  const [rescheduleData, setRescheduleData] = useState({ scheduledAt: '', reason: '' });
+  const [updating, setUpdating] = useState<string | null>(null);
 
   const weekEnd = endOfWeek(currentWeekStart, { weekStartsOn: 1 });
   const weekDays = eachDayOfInterval({ start: currentWeekStart, end: weekEnd });
 
   useEffect(() => {
     fetchAppointments();
-  }, [currentWeekStart]);
+  }, [currentWeekStart, statusFilter]);
 
   const fetchAppointments = async () => {
     setIsLoading(true);
@@ -68,6 +94,7 @@ function AppointmentsCalendar() {
         params: {
           from: currentWeekStart.toISOString(),
           to: weekEnd.toISOString(),
+          ...(statusFilter && { status: statusFilter }),
         },
       });
       setAppointments(response.data.appointments);
@@ -79,7 +106,7 @@ function AppointmentsCalendar() {
   };
 
   const getAppointmentsForDay = (day: Date) => {
-    return appointments.filter((apt) => 
+    return appointments.filter((apt) =>
       isSameDay(parseISO(apt.scheduledAt), day)
     );
   };
@@ -87,6 +114,32 @@ function AppointmentsCalendar() {
   const goToPreviousWeek = () => setCurrentWeekStart(subWeeks(currentWeekStart, 1));
   const goToNextWeek = () => setCurrentWeekStart(addWeeks(currentWeekStart, 1));
   const goToToday = () => setCurrentWeekStart(startOfWeek(new Date(), { weekStartsOn: 1 }));
+
+  const openRescheduleModal = (apt: Appointment) => {
+    setRescheduleModal(apt);
+    setRescheduleData({
+      scheduledAt: formatDateInputIST(apt.scheduledAt),
+      reason: '',
+    });
+  };
+
+  const handleReschedule = async () => {
+    if (!rescheduleModal || !rescheduleData.scheduledAt) return;
+    setUpdating(rescheduleModal.id);
+    try {
+      await api.patch(`/appointments/${rescheduleModal.id}`, {
+        scheduledAt: new Date(rescheduleData.scheduledAt).toISOString(),
+        rescheduleReason: rescheduleData.reason || undefined,
+      });
+      await fetchAppointments();
+      setRescheduleModal(null);
+      setRescheduleData({ scheduledAt: '', reason: '' });
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to reschedule');
+    } finally {
+      setUpdating(null);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -118,6 +171,24 @@ function AppointmentsCalendar() {
             <ChevronRight className="h-5 w-5 text-slate-600" />
           </button>
         </div>
+      </div>
+
+      {/* Status filter pills */}
+      <div className="flex flex-wrap items-center gap-2">
+        {statusFilterOptions.map((s) => (
+          <button
+            key={s.value}
+            onClick={() => setStatusFilter(s.value)}
+            className={clsx(
+              'rounded-full px-3 py-1 text-xs font-medium transition-colors',
+              statusFilter === s.value
+                ? 'bg-dental-500 text-white'
+                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+            )}
+          >
+            {s.label}
+          </button>
+        ))}
       </div>
 
       {/* Calendar grid */}
@@ -154,24 +225,43 @@ function AppointmentsCalendar() {
                 ) : dayAppointments.length === 0 ? (
                   <p className="py-4 text-center text-xs text-slate-400">No appointments</p>
                 ) : (
-                  dayAppointments.map((apt) => (
-                    <div
-                      key={apt.id}
-                      onClick={() => navigate(`/leads?search=${encodeURIComponent(apt.lead.name)}`)}
-                      className={clsx(
-                        'rounded-lg border p-2 text-xs cursor-pointer transition-all hover:shadow-md hover:ring-2 hover:ring-dental-300',
-                        statusColors[apt.status] || 'bg-slate-100 text-slate-700 border-slate-200'
-                      )}
-                      title={`Click to view ${apt.lead.name}'s details`}
-                    >
-                      <div className="flex items-center gap-1 font-semibold">
-                        <Clock className="h-3 w-3" />
-                        {formatDateIST(apt.scheduledAt, 'h:mm a')}
+                  dayAppointments.map((apt) => {
+                    const reason = extractRescheduleReason(apt.notes);
+                    return (
+                      <div
+                        key={apt.id}
+                        onClick={() => navigate(`/leads?search=${encodeURIComponent(apt.lead.name)}`)}
+                        className={clsx(
+                          'rounded-lg border p-2 text-xs cursor-pointer transition-all hover:shadow-md hover:ring-2 hover:ring-dental-300',
+                          statusColors[apt.status] || 'bg-slate-100 text-slate-700 border-slate-200'
+                        )}
+                        title={`Click to view ${apt.lead.name}'s details`}
+                      >
+                        <div className="flex items-center gap-1 font-semibold">
+                          <Clock className="h-3 w-3" />
+                          {formatDateIST(apt.scheduledAt, 'h:mm a')}
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openRescheduleModal(apt);
+                            }}
+                            className="ml-auto rounded p-0.5 hover:bg-white/50"
+                            title="Reschedule"
+                          >
+                            <RefreshCw className="h-3 w-3" />
+                          </button>
+                        </div>
+                        <p className="mt-1 font-medium truncate">{apt.lead.name}</p>
+                        <p className="text-[10px] opacity-75">{apt.clinic.name}</p>
+                        {apt.status === 'RESCHEDULED' && reason && (
+                          <p className="mt-1 text-[10px] italic opacity-75 truncate" title={reason}>
+                            <MessageSquare className="inline h-2.5 w-2.5 mr-0.5" />
+                            {reason}
+                          </p>
+                        )}
                       </div>
-                      <p className="mt-1 font-medium truncate">{apt.lead.name}</p>
-                      <p className="text-[10px] opacity-75">{apt.clinic.name}</p>
-                    </div>
-                  ))
+                    );
+                  })
                 )}
               </div>
             </div>
@@ -182,63 +272,144 @@ function AppointmentsCalendar() {
       {/* Appointments list */}
       <div className="rounded-xl border border-slate-200 bg-white">
         <div className="border-b border-slate-200 p-4">
-          <h3 className="font-semibold text-slate-900">All Appointments This Week</h3>
+          <h3 className="font-semibold text-slate-900">
+            {statusFilter ? `${statusFilterOptions.find(s => s.value === statusFilter)?.label} Appointments` : 'All Appointments This Week'}
+          </h3>
         </div>
         <div className="divide-y divide-slate-100">
           {appointments.length === 0 ? (
             <div className="py-12 text-center">
               <Calendar className="mx-auto h-12 w-12 text-slate-300" />
-              <p className="mt-4 text-slate-500">No appointments scheduled this week</p>
+              <p className="mt-4 text-slate-500">
+                {statusFilter ? `No ${statusFilter.toLowerCase().replace('_', ' ')} appointments this week` : 'No appointments scheduled this week'}
+              </p>
             </div>
           ) : (
             appointments
               .sort((a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime())
-              .map((apt) => (
-                <div
-                  key={apt.id}
-                  onClick={() => navigate(`/leads?search=${encodeURIComponent(apt.lead.name)}`)}
-                  className="flex items-center gap-4 p-4 hover:bg-slate-50 cursor-pointer transition-colors"
-                  title={`Click to view ${apt.lead.name}'s details`}
-                >
-                  <div className="flex-shrink-0">
-                    <div className={clsx(
-                      'rounded-lg px-3 py-2 text-center',
-                      statusColors[apt.status] || 'bg-slate-100'
-                    )}>
-                      <p className="text-xs font-medium">{formatDateIST(apt.scheduledAt, 'EEE')}</p>
-                      <p className="text-lg font-bold">{formatDateIST(apt.scheduledAt, 'd')}</p>
+              .map((apt) => {
+                const reason = extractRescheduleReason(apt.notes);
+                return (
+                  <div
+                    key={apt.id}
+                    onClick={() => navigate(`/leads?search=${encodeURIComponent(apt.lead.name)}`)}
+                    className="flex items-center gap-4 p-4 hover:bg-slate-50 cursor-pointer transition-colors"
+                    title={`Click to view ${apt.lead.name}'s details`}
+                  >
+                    <div className="flex-shrink-0">
+                      <div className={clsx(
+                        'rounded-lg px-3 py-2 text-center',
+                        statusColors[apt.status] || 'bg-slate-100'
+                      )}>
+                        <p className="text-xs font-medium">{formatDateIST(apt.scheduledAt, 'EEE')}</p>
+                        <p className="text-lg font-bold">{formatDateIST(apt.scheduledAt, 'd')}</p>
+                      </div>
+                    </div>
+
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-slate-900">{apt.lead.name}</p>
+                      <div className="mt-1 flex flex-wrap items-center gap-3 text-sm text-slate-500">
+                        <span className="flex items-center gap-1">
+                          <Clock className="h-3.5 w-3.5" />
+                          {formatDateIST(apt.scheduledAt, 'h:mm a')} ({apt.duration} min)
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <MapPin className="h-3.5 w-3.5" />
+                          {apt.clinic.name}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <Phone className="h-3.5 w-3.5" />
+                          {apt.lead.phone}
+                        </span>
+                      </div>
+                      {apt.status === 'RESCHEDULED' && reason && (
+                        <p className="mt-1 flex items-center gap-1 text-xs text-amber-600 italic">
+                          <MessageSquare className="h-3.5 w-3.5" />
+                          Reason: {reason}
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openRescheduleModal(apt);
+                        }}
+                        className="rounded-lg border border-slate-200 p-2 text-slate-500 hover:bg-slate-100 hover:text-dental-600"
+                        title="Reschedule appointment"
+                      >
+                        <RefreshCw className="h-4 w-4" />
+                      </button>
+                      <span className={clsx(
+                        'rounded-full px-3 py-1 text-xs font-medium',
+                        statusColors[apt.status] || 'bg-slate-100 text-slate-700'
+                      )}>
+                        {apt.status.replace('_', ' ')}
+                      </span>
                     </div>
                   </div>
-
-                  <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-slate-900">{apt.lead.name}</p>
-                    <div className="mt-1 flex flex-wrap items-center gap-3 text-sm text-slate-500">
-                      <span className="flex items-center gap-1">
-                        <Clock className="h-3.5 w-3.5" />
-                        {formatDateIST(apt.scheduledAt, 'h:mm a')} ({apt.duration} min)
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <MapPin className="h-3.5 w-3.5" />
-                        {apt.clinic.name}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <Phone className="h-3.5 w-3.5" />
-                        {apt.lead.phone}
-                      </span>
-                    </div>
-                  </div>
-
-                  <span className={clsx(
-                    'rounded-full px-3 py-1 text-xs font-medium',
-                    statusColors[apt.status] || 'bg-slate-100 text-slate-700'
-                  )}>
-                    {apt.status.replace('_', ' ')}
-                  </span>
-                </div>
-              ))
+                );
+              })
           )}
         </div>
       </div>
+
+      {/* Reschedule Modal */}
+      {rescheduleModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setRescheduleModal(null)} />
+          <div className="relative w-full max-w-md animate-scale-in rounded-xl bg-white p-6 shadow-xl">
+            <h3 className="font-display text-lg font-bold text-slate-900">Reschedule Appointment</h3>
+            <p className="mt-1 text-sm text-slate-500">
+              {rescheduleModal.lead.name} &mdash; {rescheduleModal.clinic.name}
+            </p>
+
+            <div className="mt-4 space-y-4">
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-slate-700">New Date & Time</label>
+                <input
+                  type="datetime-local"
+                  value={rescheduleData.scheduledAt}
+                  onChange={(e) => setRescheduleData((prev) => ({ ...prev, scheduledAt: e.target.value }))}
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-dental-500 focus:outline-none focus:ring-2 focus:ring-dental-500/20"
+                />
+              </div>
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-slate-700">Reason (Optional)</label>
+                <input
+                  type="text"
+                  value={rescheduleData.reason}
+                  onChange={(e) => setRescheduleData((prev) => ({ ...prev, reason: e.target.value }))}
+                  placeholder="e.g., Patient requested different time"
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-dental-500 focus:outline-none focus:ring-2 focus:ring-dental-500/20"
+                />
+              </div>
+            </div>
+
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                onClick={() => setRescheduleModal(null)}
+                className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleReschedule}
+                disabled={!rescheduleData.scheduledAt || updating === rescheduleModal.id}
+                className="flex items-center gap-2 rounded-lg bg-dental-500 px-4 py-2 text-sm font-medium text-white hover:bg-dental-600 disabled:opacity-50"
+              >
+                {updating === rescheduleModal.id ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <RefreshCw className="h-4 w-4" />
+                )}
+                Reschedule
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -851,7 +851,7 @@ export default function StaffDashboard() {
                 />
               </div>
               <div>
-                <label className="mb-1.5 block text-sm font-medium text-slate-700">Reason (Optional)</label>
+                <label className="mb-1.5 block text-sm font-medium text-slate-700">Reason (Required)</label>
                 <input
                   type="text"
                   value={rescheduleData.reason}
@@ -871,7 +871,7 @@ export default function StaffDashboard() {
               </button>
               <button
                 onClick={handleReschedule}
-                disabled={!rescheduleData.scheduledAt || updating === rescheduleModal.id}
+                disabled={!rescheduleData.scheduledAt || !rescheduleData.reason.trim() || updating === rescheduleModal.id}
                 className="flex items-center gap-2 rounded-lg bg-dental-500 px-4 py-2 text-sm font-medium text-white hover:bg-dental-600 disabled:opacity-50"
               >
                 {updating === rescheduleModal.id ? (
