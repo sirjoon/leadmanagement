@@ -207,8 +207,10 @@ resource "aws_instance" "dentacrm" {
     # Update system
     dnf update -y
 
-    # Install Docker + AWS CLI + Git
-    dnf install -y docker git aws-cli
+    # Install Docker + AWS CLI + Git + Cron
+    dnf install -y docker git aws-cli cronie
+    systemctl enable crond
+    systemctl start crond
     systemctl enable docker
     systemctl start docker
     usermod -aG docker ec2-user
