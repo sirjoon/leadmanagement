@@ -20,9 +20,12 @@ const statuses: { value: LeadStatus; label: string; icon: string }[] = [
   { value: 'ATTEMPTING', label: 'Attempting', icon: '📞' },
   { value: 'CONNECTED', label: 'Connected', icon: '✓' },
   { value: 'APPOINTMENT_BOOKED', label: 'Booked', icon: '📅' },
+  { value: 'RESCHEDULED', label: 'Rescheduled', icon: '🔄' },
   { value: 'VISITED', label: 'Visited', icon: '🏥' },
   { value: 'TREATMENT_STARTED', label: 'Treatment', icon: '⚕️' },
   { value: 'LOST', label: 'Lost', icon: '❌' },
+  { value: 'DNC', label: 'DNC', icon: '🚫' },
+  { value: 'DNR', label: 'DNR', icon: '📵' },
 ];
 
 const priorities: { value: Priority; label: string; icon: string }[] = [
