@@ -255,6 +255,14 @@ async function main() {
   const clinicBySlug = new Map(clinics.map((c) => [c.slug, c]));
   console.log(`\nClinics in DB: ${clinics.map((c) => c.slug).join(', ')}`);
 
+  // 2b. Find the lead user to auto-assign all leads
+  const leadUser = await prisma.user.findFirst({ where: { tenantId: 'avmsmiles', role: 'LEAD_USER' } });
+  if (leadUser) {
+    console.log(`Lead user found: ${leadUser.name} (${leadUser.email}) - all leads will be assigned`);
+  } else {
+    console.log('No lead user found - leads will be unassigned');
+  }
+
   // 3. Clear existing dummy data
   console.log('\nClearing existing data...');
   await prisma.appointment.deleteMany({ where: { lead: { tenantId: 'avmsmiles' } } });
@@ -315,6 +323,7 @@ async function main() {
           followUpDate: row.followUpDate,
           lastContactedAt: row.lastContactDate,
           nextAction: row.followUpDate ? 'Follow up' : null,
+          assignedUserId: leadUser?.id || null,
         },
       });
 
