@@ -180,21 +180,18 @@ router.get('/staff-summary', asyncHandler(async (req: AuthenticatedRequest, res:
     select: { status: true },
   });
 
-  // Upcoming (next 7 days, excluding today)
+  // Upcoming (from tomorrow onwards, next 30 scheduled)
   const startOfTomorrow = new Date(startOfToday);
   startOfTomorrow.setDate(startOfTomorrow.getDate() + 1);
-  const endOfNext7 = new Date(startOfToday);
-  endOfNext7.setDate(endOfNext7.getDate() + 7);
-  endOfNext7.setHours(23, 59, 59);
 
   const upcomingAppointments = await req.db.appointment.findMany({
-    where: { ...baseWhere, scheduledAt: { gte: startOfTomorrow, lte: endOfNext7 }, status: { in: ['SCHEDULED', 'CONFIRMED'] } },
+    where: { ...baseWhere, scheduledAt: { gte: startOfTomorrow }, status: { in: ['SCHEDULED', 'CONFIRMED', 'RESCHEDULED'] } },
     include: {
-      lead: { select: { id: true, name: true, phone: true, treatmentInterest: true } },
+      lead: { select: { id: true, name: true, phone: true, treatmentInterest: true, patientLocation: true } },
       clinic: { select: { id: true, name: true, slug: true } },
     },
     orderBy: { scheduledAt: 'asc' },
-    take: 10,
+    take: 30,
   });
 
   const calcStats = (appts: { status: string }[]) => ({

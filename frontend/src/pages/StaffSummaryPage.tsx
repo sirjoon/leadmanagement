@@ -300,123 +300,144 @@ export default function StaffSummaryPage() {
         </div>
       </div>
 
-      {/* Today's Schedule + Upcoming */}
-      <div className="grid gap-6 lg:grid-cols-2">
-        {/* Today's Appointments */}
-        <div className="rounded-xl border border-slate-200 bg-white">
-          <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
-            <h2 className="font-display text-sm font-semibold uppercase tracking-wide text-slate-400">
-              Today's Schedule ({today.appointments.length})
-            </h2>
-            <button
-              onClick={() => navigate('/appointments')}
-              className="flex items-center gap-1 text-xs font-medium text-dental-600 hover:text-dental-700"
-            >
-              View All <ArrowRight className="h-3 w-3" />
-            </button>
-          </div>
-          <div className="max-h-80 divide-y divide-slate-50 overflow-y-auto">
-            {today.appointments.length === 0 ? (
-              <div className="flex flex-col items-center py-8 text-center">
-                <Calendar className="h-8 w-8 text-slate-300" />
-                <p className="mt-2 text-sm text-slate-500">No appointments today</p>
-              </div>
-            ) : (
-              today.appointments.map((apt) => {
-                const config = statusConfig[apt.status];
-                const StatusIcon = config.icon;
-                const isPast = new Date(apt.scheduledAt) < new Date();
-                return (
-                  <div
-                    key={apt.id}
-                    className={clsx(
-                      'flex items-center gap-3 px-5 py-3 transition-colors hover:bg-slate-50',
-                      isPast && !['COMPLETED', 'NO_SHOW'].includes(apt.status) && 'opacity-50'
-                    )}
-                  >
-                    <div className="w-16 text-right">
-                      <p className="text-sm font-semibold text-slate-900">
-                        {formatDateIST(apt.scheduledAt, 'h:mm')}
-                      </p>
-                      <p className="text-[10px] text-slate-400">
-                        {formatDateIST(apt.scheduledAt, 'a')}
-                      </p>
-                    </div>
-                    <div className="h-8 w-px bg-slate-200" />
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium text-slate-900">{apt.lead.name}</p>
-                      <div className="flex items-center gap-2 text-[11px] text-slate-400">
-                        <span className="flex items-center gap-0.5">
-                          <Phone className="h-3 w-3" />
-                          {apt.lead.phone}
-                        </span>
-                        {apt.lead.treatmentInterest && (
-                          <span className="flex items-center gap-0.5">
-                            <Stethoscope className="h-3 w-3" />
-                            {apt.lead.treatmentInterest}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    <span className={clsx(
-                      'flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold',
-                      config.bgColor, config.color
-                    )}>
-                      <StatusIcon className="h-3 w-3" />
-                      {config.label}
-                    </span>
-                  </div>
-                );
-              })
-            )}
-          </div>
+      {/* Today's Schedule */}
+      <div className="rounded-xl border border-slate-200 bg-white">
+        <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
+          <h2 className="font-display text-sm font-semibold uppercase tracking-wide text-slate-400">
+            Today's Schedule ({today.appointments.length})
+          </h2>
+          <button
+            onClick={() => navigate('/appointments')}
+            className="flex items-center gap-1 text-xs font-medium text-dental-600 hover:text-dental-700"
+          >
+            View All <ArrowRight className="h-3 w-3" />
+          </button>
         </div>
-
-        {/* Upcoming Appointments */}
-        <div className="rounded-xl border border-slate-200 bg-white">
-          <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
-            <h2 className="font-display text-sm font-semibold uppercase tracking-wide text-slate-400">
-              Upcoming ({upcoming.length})
-            </h2>
-          </div>
-          <div className="max-h-80 divide-y divide-slate-50 overflow-y-auto">
-            {upcoming.length === 0 ? (
-              <div className="flex flex-col items-center py-8 text-center">
-                <Calendar className="h-8 w-8 text-slate-300" />
-                <p className="mt-2 text-sm text-slate-500">No upcoming appointments</p>
-              </div>
-            ) : (
-              upcoming.map((apt) => {
-                const config = statusConfig[apt.status];
-                return (
-                  <div key={apt.id} className="flex items-center gap-3 px-5 py-3">
-                    <div className="w-16 text-right">
-                      <p className="text-xs font-semibold text-slate-700">
-                        {format(parseISO(apt.scheduledAt), 'MMM d')}
-                      </p>
-                      <p className="text-[10px] text-slate-400">
-                        {formatDateIST(apt.scheduledAt, 'h:mm a')}
-                      </p>
-                    </div>
-                    <div className="h-8 w-px bg-slate-200" />
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium text-slate-900">{apt.lead.name}</p>
+        <div className="max-h-80 divide-y divide-slate-50 overflow-y-auto">
+          {today.appointments.length === 0 ? (
+            <div className="flex flex-col items-center py-8 text-center">
+              <Calendar className="h-8 w-8 text-slate-300" />
+              <p className="mt-2 text-sm text-slate-500">No appointments today</p>
+            </div>
+          ) : (
+            today.appointments.map((apt) => {
+              const config = statusConfig[apt.status];
+              const StatusIcon = config.icon;
+              const isPast = new Date(apt.scheduledAt) < new Date();
+              return (
+                <div
+                  key={apt.id}
+                  className={clsx(
+                    'flex items-center gap-3 px-5 py-3 transition-colors hover:bg-slate-50',
+                    isPast && !['COMPLETED', 'NO_SHOW'].includes(apt.status) && 'opacity-50'
+                  )}
+                >
+                  <div className="w-16 text-right">
+                    <p className="text-sm font-semibold text-slate-900">
+                      {formatDateIST(apt.scheduledAt, 'h:mm')}
+                    </p>
+                    <p className="text-[10px] text-slate-400">
+                      {formatDateIST(apt.scheduledAt, 'a')}
+                    </p>
+                  </div>
+                  <div className="h-8 w-px bg-slate-200" />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium text-slate-900">{apt.lead.name}</p>
+                    <div className="flex items-center gap-2 text-[11px] text-slate-400">
+                      <span className="flex items-center gap-0.5">
+                        <Phone className="h-3 w-3" />
+                        {apt.lead.phone}
+                      </span>
                       {apt.lead.treatmentInterest && (
-                        <p className="truncate text-[11px] text-slate-400">{apt.lead.treatmentInterest}</p>
+                        <span className="flex items-center gap-0.5">
+                          <Stethoscope className="h-3 w-3" />
+                          {apt.lead.treatmentInterest}
+                        </span>
                       )}
                     </div>
-                    <span className={clsx(
-                      'rounded-full px-2 py-0.5 text-[10px] font-semibold',
-                      config.bgColor, config.color
-                    )}>
-                      {config.label}
-                    </span>
                   </div>
-                );
-              })
-            )}
-          </div>
+                  <span className={clsx(
+                    'flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold',
+                    config.bgColor, config.color
+                  )}>
+                    <StatusIcon className="h-3 w-3" />
+                    {config.label}
+                  </span>
+                </div>
+              );
+            })
+          )}
         </div>
+      </div>
+
+      {/* Upcoming Appointments - Full Width */}
+      <div className="rounded-xl border border-slate-200 bg-white">
+        <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
+          <h2 className="font-display text-sm font-semibold uppercase tracking-wide text-slate-400">
+            Upcoming Appointments ({upcoming.length})
+          </h2>
+          <button
+            onClick={() => navigate('/appointments')}
+            className="flex items-center gap-1 text-xs font-medium text-dental-600 hover:text-dental-700"
+          >
+            View All <ArrowRight className="h-3 w-3" />
+          </button>
+        </div>
+        {upcoming.length === 0 ? (
+          <div className="flex flex-col items-center py-8 text-center">
+            <Calendar className="h-8 w-8 text-slate-300" />
+            <p className="mt-2 text-sm text-slate-500">No upcoming appointments</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-slate-100 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+                  <th className="px-5 py-3">Date & Time</th>
+                  <th className="px-5 py-3">Patient</th>
+                  <th className="px-5 py-3">Phone</th>
+                  <th className="px-5 py-3">Treatment</th>
+                  <th className="px-5 py-3">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-50">
+                {upcoming.map((apt) => {
+                  const config = statusConfig[apt.status];
+                  const StatusIcon = config.icon;
+                  return (
+                    <tr key={apt.id} className="transition-colors hover:bg-slate-50">
+                      <td className="whitespace-nowrap px-5 py-3">
+                        <p className="font-semibold text-slate-900">{format(parseISO(apt.scheduledAt), 'MMM d, yyyy')}</p>
+                        <p className="text-[11px] text-slate-400">{formatDateIST(apt.scheduledAt, 'h:mm a')}</p>
+                      </td>
+                      <td className="px-5 py-3">
+                        <p className="font-medium text-slate-900">{apt.lead.name}</p>
+                      </td>
+                      <td className="px-5 py-3">
+                        <a href={`tel:${apt.lead.phone}`} className="flex items-center gap-1 text-slate-600 hover:text-dental-600">
+                          <Phone className="h-3 w-3" />
+                          {apt.lead.phone}
+                        </a>
+                      </td>
+                      <td className="px-5 py-3 text-slate-600">
+                        {apt.lead.treatmentInterest || '—'}
+                      </td>
+                      <td className="px-5 py-3">
+                        <span className={clsx(
+                          'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold',
+                          config.bgColor, config.color
+                        )}>
+                          <StatusIcon className="h-3 w-3" />
+                          {config.label}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   );
