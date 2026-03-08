@@ -266,7 +266,7 @@ Every action updates lastContactDate and reflects across all roles.
 
 ---
 
-## Story 6: Treatment Tab — STATUS: PENDING
+## Story 6: Treatment Tab — STATUS: COMPLETED ✅
 
 **Size:** Large | **Priority:** 6 | **Dependencies:** Stories 1-5
 
@@ -328,7 +328,7 @@ FILTERS & SORT:
 
 ---
 
-## Story 7: Treatment Denied Tab — STATUS: PENDING
+## Story 7: Treatment Denied Tab — STATUS: COMPLETED ✅
 
 **Size:** Medium | **Priority:** 7 | **Dependencies:** Stories 1-6
 
@@ -381,7 +381,7 @@ FILTERS & SORT:
 
 ---
 
-## Story 8: Follow-ups Tab — STATUS: PENDING
+## Story 8: Follow-ups Tab — STATUS: COMPLETED ✅
 
 **Size:** Large | **Priority:** 8 | **Dependencies:** Stories 1-7
 
@@ -442,7 +442,7 @@ ROLE-BASED VIEW:
 
 ---
 
-## Story 9: DNR/DNC Tab — STATUS: PENDING
+## Story 9: DNR/DNC Tab — STATUS: COMPLETED ✅
 
 **Size:** Medium | **Priority:** 9 | **Dependencies:** Stories 1-4
 
@@ -587,10 +587,10 @@ Reports tab already exists. Only change:
 | 4 | Story 4 - Full sync (clinic↔admin↔lead + auto-refresh) | Medium | COMPLETED ✅ |
 | 5 | Story 11 - Responsive navigation (9 tabs) | Medium | COMPLETED ✅ |
 | 6 | Story 5 - Visited Tab | Large | COMPLETED ✅ |
-| 7 | Story 6 - Treatment Tab | Large | PENDING |
-| 8 | Story 7 - Treatment Denied Tab | Medium | PENDING |
-| 9 | Story 8 - Follow-ups Tab (cross-cutting) | Large | PENDING |
-| 10 | Story 9 - DNR/DNC Tab | Medium | PENDING |
+| 7 | Story 6 - Treatment Tab | Large | COMPLETED ✅ |
+| 8 | Story 7 - Treatment Denied Tab | Medium | COMPLETED ✅ |
+| 9 | Story 8 - Follow-ups Tab (cross-cutting) | Large | COMPLETED ✅ |
+| 10 | Story 9 - DNR/DNC Tab | Medium | COMPLETED ✅ |
 | 11 | Story 10 - Lost Tab | Medium | PENDING |
 | 12 | Story 12 - Reports (hide from clinic) | Small | PENDING |
 
