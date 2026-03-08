@@ -59,7 +59,7 @@ LOST TAB (status = LOST) →
 
 ---
 
-## Story 1: Schema Changes — STATUS: PENDING
+## Story 1: Schema Changes — STATUS: COMPLETED ✅
 
 **Size:** Medium | **Priority:** 1 | **Dependencies:** None (foundation)
 
@@ -103,7 +103,7 @@ SCHEMA CHANGES:
 
 ---
 
-## Story 2: UI Label Changes — STATUS: PENDING
+## Story 2: UI Label Changes — STATUS: COMPLETED ✅
 
 **Size:** Small | **Priority:** 2 | **Dependencies:** None
 
@@ -138,7 +138,7 @@ Apply all label changes at all levels: Admin, Lead User, Clinic Staff.
 
 ---
 
-## Story 3: DNR Confirmation Dialog — STATUS: PENDING
+## Story 3: DNR Confirmation Dialog — STATUS: COMPLETED ✅
 
 **Size:** Medium | **Priority:** 3 | **Dependencies:** None
 
@@ -581,9 +581,9 @@ Reports tab already exists. Only change:
 
 | # | Story | Size | Status |
 |---|-------|------|--------|
-| 1 | Story 1 - Schema (lastContactDate, followUp, TREATMENT_DENIED) | Medium | PENDING |
-| 2 | Story 2 - Label changes (Visited, Lost, phone, remove Attempting) | Small | PENDING |
-| 3 | Story 3 - DNR confirmation dialog (reusable component) | Medium | PENDING |
+| 1 | Story 1 - Schema (lastContactDate, followUp, TREATMENT_DENIED) | Medium | COMPLETED ✅ |
+| 2 | Story 2 - Label changes (Visited, Lost, phone, remove Attempting) | Small | COMPLETED ✅ |
+| 3 | Story 3 - DNR confirmation dialog (reusable component) | Medium | COMPLETED ✅ |
 | 4 | Story 4 - Full sync (clinic↔admin↔lead + auto-refresh) | Medium | PENDING |
 | 5 | Story 11 - Responsive navigation (9 tabs) | Medium | PENDING |
 | 6 | Story 5 - Visited Tab | Large | PENDING |
