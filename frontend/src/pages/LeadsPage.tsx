@@ -4,7 +4,9 @@ import {
   Plus,
   Filter,
   AlertCircle,
-  RefreshCw
+  RefreshCw,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
 import { useLeadStore } from '../store/leadStore';
@@ -62,7 +64,7 @@ export default function LeadsPage() {
     fetchLeads({ search: searchQuery, page: 1 });
   };
 
-  const [, setSelectedLead] = useState<unknown>(null);
+  const [showAllTbd, setShowAllTbd] = useState(false);
 
   const handleRefresh = () => {
     fetchLeads(filters);
@@ -143,29 +145,56 @@ export default function LeadsPage() {
       {/* TBD Queue - Admin only */}
       {isAdmin && tbdLeads.length > 0 && (
         <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
-          <div className="mb-3 flex items-center gap-2">
-            <AlertCircle className="h-5 w-5 text-amber-600" />
-            <h3 className="font-semibold text-amber-900">
-              Unassigned Leads ({tbdLeads.length})
-            </h3>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {tbdLeads.slice(0, 5).map((lead) => (
-              <button
-                key={lead.id}
-                onClick={() => setSelectedLead(lead)}
-                className="flex items-center gap-2 rounded-lg bg-white px-3 py-2 text-sm shadow-sm transition-colors hover:bg-amber-100"
-              >
-                <span className="font-medium text-slate-900">{lead.name}</span>
-                <span className="text-slate-500">{lead.phone}</span>
-              </button>
-            ))}
-            {tbdLeads.length > 5 && (
-              <span className="flex items-center px-3 text-sm text-amber-700">
-                +{tbdLeads.length - 5} more
-              </span>
-            )}
-          </div>
+          <button
+            onClick={() => setShowAllTbd(!showAllTbd)}
+            className="mb-1 flex w-full items-center justify-between"
+          >
+            <div className="flex items-center gap-2">
+              <AlertCircle className="h-5 w-5 text-amber-600" />
+              <h3 className="font-semibold text-amber-900">
+                Unassigned Leads ({tbdLeads.length})
+              </h3>
+            </div>
+            {showAllTbd
+              ? <ChevronUp className="h-5 w-5 text-amber-600" />
+              : <ChevronDown className="h-5 w-5 text-amber-600" />
+            }
+          </button>
+
+          {!showAllTbd && (
+            <div className="mt-2 flex flex-wrap gap-2">
+              {tbdLeads.slice(0, 5).map((lead) => (
+                <span
+                  key={lead.id}
+                  className="flex items-center gap-2 rounded-lg bg-white px-3 py-2 text-sm shadow-sm"
+                >
+                  <span className="font-medium text-slate-900">{lead.name}</span>
+                  <span className="text-slate-500">{lead.phone}</span>
+                </span>
+              ))}
+              {tbdLeads.length > 5 && (
+                <button
+                  onClick={() => setShowAllTbd(true)}
+                  className="flex items-center px-3 text-sm font-medium text-amber-700 hover:text-amber-900"
+                >
+                  +{tbdLeads.length - 5} more — click to expand
+                </button>
+              )}
+            </div>
+          )}
+
+          {showAllTbd && (
+            <div className="mt-3 space-y-3">
+              {tbdLeads.map((lead, index) => (
+                <LeadCard
+                  key={lead.id}
+                  lead={lead}
+                  index={index}
+                  onSelect={() => {}}
+                />
+              ))}
+            </div>
+          )}
         </div>
       )}
 
@@ -214,7 +243,7 @@ export default function LeadsPage() {
             key={lead.id} 
             lead={lead} 
             index={index}
-            onSelect={() => setSelectedLead(lead)}
+            onSelect={() => {}}
           />
         ))}
       </div>
