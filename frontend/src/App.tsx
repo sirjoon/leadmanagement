@@ -10,6 +10,12 @@ import AppointmentsPage from './pages/AppointmentsPage';
 import SettingsPage from './pages/SettingsPage';
 import ReportsPage from './pages/ReportsPage';
 import StaffSummaryPage from './pages/StaffSummaryPage';
+import VisitedPage from './pages/VisitedPage';
+import TreatmentPage from './pages/TreatmentPage';
+import TreatmentDeniedPage from './pages/TreatmentDeniedPage';
+import FollowUpsPage from './pages/FollowUpsPage';
+import DnrDncPage from './pages/DnrDncPage';
+import LostPage from './pages/LostPage';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuthStore();
@@ -39,7 +45,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
  */
 function AdminOnlyRoute({ children }: { children: React.ReactNode }) {
   const { user } = useAuthStore();
-  
+
   if (!user || !isAdminRole(user.role)) {
     return (
       <div className="flex h-full items-center justify-center p-8">
@@ -47,7 +53,7 @@ function AdminOnlyRoute({ children }: { children: React.ReactNode }) {
           <div className="mb-4 text-6xl">🔒</div>
           <h2 className="mb-2 text-xl font-semibold text-slate-900">Access Restricted</h2>
           <p className="text-slate-600">
-            This section is only available to administrators. 
+            This section is only available to administrators.
             Please contact your admin if you need access.
           </p>
         </div>
@@ -64,7 +70,7 @@ function AdminOnlyRoute({ children }: { children: React.ReactNode }) {
  */
 function LeadAccessRoute({ children }: { children: React.ReactNode }) {
   const { user } = useAuthStore();
-  
+
   if (!user || isClinicStaffRole(user.role)) {
     return (
       <div className="flex h-full items-center justify-center p-8">
@@ -72,7 +78,7 @@ function LeadAccessRoute({ children }: { children: React.ReactNode }) {
           <div className="mb-4 text-6xl">📋</div>
           <h2 className="mb-2 text-xl font-semibold text-slate-900">Lead Management</h2>
           <p className="text-slate-600">
-            Lead management is not available for clinic staff. 
+            Lead management is not available for clinic staff.
             Please use the Appointments section to manage patient visits.
           </p>
         </div>
@@ -83,10 +89,24 @@ function LeadAccessRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+/**
+ * No staff route - accessible to Admin and Lead Users
+ * Story 12: Reports hidden from clinic staff
+ */
+function NoStaffRoute({ children }: { children: React.ReactNode }) {
+  const { user } = useAuthStore();
+
+  if (!user || isClinicStaffRole(user.role)) {
+    return <Navigate to="/appointments" replace />;
+  }
+
+  return <>{children}</>;
+}
+
 function App() {
   const { user } = useAuthStore();
   const isStaff = user ? isClinicStaffRole(user.role) : false;
-  
+
   // Determine default route based on role (User Story C1, C4)
   const defaultRoute = isStaff ? '/summary' : '/leads';
 
@@ -105,7 +125,7 @@ function App() {
               <Routes>
                 {/* Default redirect based on role */}
                 <Route path="/" element={<Navigate to={defaultRoute} replace />} />
-                
+
                 {/* Leads - Admin and Lead Users only (User Story C4) */}
                 <Route path="/leads" element={
                   <LeadAccessRoute>
@@ -117,34 +137,40 @@ function App() {
                     <LeadDetailPage />
                   </LeadAccessRoute>
                 } />
-                
+
                 {/* Staff Summary - Staff landing page */}
                 <Route path="/summary" element={<StaffSummaryPage />} />
 
-                {/* Appointments - All roles (User Story C1) */}
+                {/* Patient journey tabs - All roles */}
                 <Route path="/appointments" element={<AppointmentsPage />} />
-                
+                <Route path="/visited" element={<VisitedPage />} />
+                <Route path="/treatment" element={<TreatmentPage />} />
+                <Route path="/treatment-denied" element={<TreatmentDeniedPage />} />
+                <Route path="/follow-ups" element={<FollowUpsPage />} />
+                <Route path="/dnr-dnc" element={<DnrDncPage />} />
+                <Route path="/lost" element={<LostPage />} />
+
                 {/* Analytics - Admin only (User Story A3) */}
                 <Route path="/analytics" element={
                   <AdminOnlyRoute>
                     <AnalyticsPage />
                   </AdminOnlyRoute>
                 } />
-                
+
                 {/* Users - Admin only (User Story A1) */}
                 <Route path="/users" element={
                   <AdminOnlyRoute>
                     <UsersPage />
                   </AdminOnlyRoute>
                 } />
-                
-                {/* Reports - Admin only (User Story A3) */}
+
+                {/* Reports - Admin + Lead User (Story 12: hide from clinic) */}
                 <Route path="/reports" element={
-                  <AdminOnlyRoute>
+                  <NoStaffRoute>
                     <ReportsPage />
-                  </AdminOnlyRoute>
+                  </NoStaffRoute>
                 } />
-                
+
                 {/* Settings - All roles */}
                 <Route path="/settings" element={<SettingsPage />} />
 

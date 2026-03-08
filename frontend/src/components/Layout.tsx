@@ -11,7 +11,13 @@ import {
   ChevronDown,
   Building2,
   FileText,
-  LayoutDashboard
+  LayoutDashboard,
+  CheckCircle2,
+  Stethoscope,
+  XCircle,
+  Clock,
+  PhoneOff,
+  UserX,
 } from 'lucide-react';
 import { useState } from 'react';
 import { useAuthStore, isAdminRole, isClinicStaffRole, isLeadUserRole, Role } from '../store/authStore';
@@ -30,27 +36,39 @@ interface LayoutProps {
 
 /**
  * Navigation items with role-based access
- * User Story C4: Clinic staff sees only appointments
- * User Story A1: Admin sees all items
- * User Story L1: Lead users see leads and appointments
+ * - 'all': visible to all roles
+ * - 'admin': admin only
+ * - 'lead_access': admin + lead user (not clinic staff)
+ * - 'staff': clinic staff only
+ * - 'no_staff': admin + lead user (hide from clinic staff)
  */
-type NavItemAccess = 'all' | 'admin' | 'lead_access' | 'staff';
+type NavItemAccess = 'all' | 'admin' | 'lead_access' | 'staff' | 'no_staff';
 
 interface NavItem {
   path: string;
   label: string;
   icon: React.FC<{ className?: string }>;
   access: NavItemAccess;
+  section?: 'main' | 'patient' | 'admin';
 }
 
 const navItems: NavItem[] = [
-  { path: '/summary', label: 'Summary', icon: LayoutDashboard, access: 'staff' },
-  { path: '/leads', label: 'Leads', icon: Users, access: 'lead_access' },
-  { path: '/appointments', label: 'Appointments', icon: Calendar, access: 'all' },
-  { path: '/analytics', label: 'Analytics', icon: BarChart3, access: 'admin' },
-  { path: '/reports', label: 'Reports', icon: FileText, access: 'admin' },
-  { path: '/users', label: 'Users', icon: UserCircle, access: 'admin' },
-  { path: '/settings', label: 'Settings', icon: Settings, access: 'all' },
+  // Staff-only summary
+  { path: '/summary', label: 'Summary', icon: LayoutDashboard, access: 'staff', section: 'main' },
+  // Patient journey tabs (all roles)
+  { path: '/leads', label: 'Leads', icon: Users, access: 'lead_access', section: 'patient' },
+  { path: '/appointments', label: 'Appointments', icon: Calendar, access: 'all', section: 'patient' },
+  { path: '/visited', label: 'Visited', icon: CheckCircle2, access: 'all', section: 'patient' },
+  { path: '/treatment', label: 'Treatment', icon: Stethoscope, access: 'all', section: 'patient' },
+  { path: '/treatment-denied', label: 'Tx Denied', icon: XCircle, access: 'all', section: 'patient' },
+  { path: '/follow-ups', label: 'Follow-ups', icon: Clock, access: 'all', section: 'patient' },
+  { path: '/dnr-dnc', label: 'DNR/DNC', icon: PhoneOff, access: 'all', section: 'patient' },
+  { path: '/lost', label: 'Lost', icon: UserX, access: 'all', section: 'patient' },
+  // Admin tools
+  { path: '/reports', label: 'Reports', icon: FileText, access: 'no_staff', section: 'admin' },
+  { path: '/analytics', label: 'Analytics', icon: BarChart3, access: 'admin', section: 'admin' },
+  { path: '/users', label: 'Users', icon: UserCircle, access: 'admin', section: 'admin' },
+  { path: '/settings', label: 'Settings', icon: Settings, access: 'all', section: 'admin' },
 ];
 
 /**
@@ -61,6 +79,7 @@ const canAccessNavItem = (role: Role, access: NavItemAccess): boolean => {
   if (access === 'admin') return isAdminRole(role);
   if (access === 'lead_access') return isAdminRole(role) || isLeadUserRole(role);
   if (access === 'staff') return isClinicStaffRole(role);
+  if (access === 'no_staff') return !isClinicStaffRole(role);
   return false;
 };
 
@@ -87,141 +106,167 @@ export default function Layout({ children }: LayoutProps) {
   const isStaff = user?.role ? isClinicStaffRole(user.role) : false;
 
   // Filter nav items based on role
-  const filteredNavItems = navItems.filter(item => 
+  const filteredNavItems = navItems.filter(item =>
     user?.role ? canAccessNavItem(user.role, item.access) : false
   );
+
+  // Group items by section
+  const patientItems = filteredNavItems.filter(i => i.section === 'patient');
+  const adminItems = filteredNavItems.filter(i => i.section === 'admin');
+  const mainItems = filteredNavItems.filter(i => i.section === 'main');
+
+  const renderNavLink = (item: NavItem) => {
+    const Icon = item.icon;
+    const isActive = location.pathname === item.path ||
+      (item.path !== '/' && location.pathname.startsWith(item.path + '/'));
+
+    return (
+      <Link
+        key={item.path}
+        to={item.path}
+        onClick={() => setSidebarOpen(false)}
+        className={clsx(
+          'mb-0.5 flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all',
+          isActive
+            ? 'bg-dental-500/20 text-dental-400'
+            : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+        )}
+      >
+        <Icon className="h-4 w-4 flex-shrink-0" />
+        <span className="truncate">{item.label}</span>
+      </Link>
+    );
+  };
 
   return (
     <div className="min-h-screen bg-slate-50">
       {/* Mobile sidebar backdrop */}
       {sidebarOpen && (
-        <div 
+        <div
           className="fixed inset-0 z-40 bg-black/50 lg:hidden"
           onClick={() => setSidebarOpen(false)}
         />
       )}
 
       {/* Sidebar */}
-      <aside 
+      <aside
         className={clsx(
-          'fixed inset-y-0 left-0 z-50 w-64 transform bg-gradient-dark transition-transform duration-300 lg:translate-x-0',
+          'fixed inset-y-0 left-0 z-50 w-56 transform bg-gradient-dark transition-transform duration-300 lg:translate-x-0',
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         )}
       >
         {/* Logo */}
-        <div className="flex h-16 items-center gap-3 px-6 text-white">
+        <div className="flex h-14 items-center gap-2 px-4 text-white">
           <div className="text-dental-400">
             <ToothIcon />
           </div>
           <div>
-            <h1 className="font-display text-xl font-bold">DentraCRM</h1>
+            <h1 className="font-display text-lg font-bold">DentraCRM</h1>
             {tenantId && (
-              <p className="text-xs text-slate-400 capitalize">{tenantId.replace(/-/g, ' ')}</p>
+              <p className="text-[10px] text-slate-400 capitalize">{tenantId.replace(/-/g, ' ')}</p>
             )}
           </div>
         </div>
 
-        {/* Navigation */}
-        <nav className="mt-6 px-4">
-          {filteredNavItems.map((item) => {
-            const Icon = item.icon;
-            const isActive = location.pathname.startsWith(item.path);
-            
-            return (
-              <Link
-                key={item.path}
-                to={item.path}
-                onClick={() => setSidebarOpen(false)}
-                className={clsx(
-                  'mb-1 flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium transition-all',
-                  isActive 
-                    ? 'bg-dental-500/20 text-dental-400' 
-                    : 'text-slate-400 hover:bg-slate-800 hover:text-white'
-                )}
-              >
-                <Icon className="h-5 w-5" />
-                {item.label}
-              </Link>
-            );
-          })}
+        {/* Navigation - scrollable */}
+        <nav className="flex flex-col overflow-y-auto px-3" style={{ height: 'calc(100vh - 56px - 60px)' }}>
+          {/* Staff summary */}
+          {mainItems.length > 0 && (
+            <div className="mb-2">
+              {mainItems.map(renderNavLink)}
+            </div>
+          )}
+
+          {/* Patient journey section */}
+          {patientItems.length > 0 && (
+            <div className="mb-2">
+              <p className="mb-1 px-3 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+                Patient Journey
+              </p>
+              {patientItems.map(renderNavLink)}
+            </div>
+          )}
+
+          {/* Admin / tools section */}
+          {adminItems.length > 0 && (
+            <div className="mb-2">
+              <p className="mb-1 px-3 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+                Tools
+              </p>
+              {adminItems.map(renderNavLink)}
+            </div>
+          )}
+
+          {/* Role badge */}
+          <div className="mt-auto pb-2">
+            <div className={clsx(
+              'rounded-lg p-2',
+              isAdmin ? 'bg-dental-500/20' : isStaff ? 'bg-amber-500/20' : 'bg-blue-500/20'
+            )}>
+              <div className="flex items-center gap-2">
+                <UserCircle className={clsx(
+                  'h-4 w-4',
+                  isAdmin ? 'text-dental-400' : isStaff ? 'text-amber-400' : 'text-blue-400'
+                )} />
+                <div>
+                  <p className={clsx(
+                    'text-xs font-medium',
+                    isAdmin ? 'text-dental-400' : isStaff ? 'text-amber-400' : 'text-blue-400'
+                  )}>
+                    {user?.role ? getRoleLabel(user.role) : 'User'}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Clinic info for staff */}
+            {isStaff && user?.location && (
+              <div className="mt-2 rounded-lg bg-slate-800 p-2">
+                <div className="flex items-center gap-1.5 text-[10px] text-slate-400">
+                  <Building2 className="h-3 w-3" />
+                  <span className="capitalize">{user.location.replace(/-/g, ' ')}</span>
+                </div>
+              </div>
+            )}
+
+            {/* Clinic selector (for admin) */}
+            {isAdmin && user?.clinics && user.clinics.length > 0 && (
+              <div className="mt-2 rounded-lg bg-slate-800 p-2">
+                <div className="mb-1 flex items-center gap-1.5 text-[10px] text-slate-400">
+                  <Building2 className="h-3 w-3" />
+                  <span>Clinics</span>
+                </div>
+                <div className="flex flex-wrap gap-1">
+                  {user.clinics.map((clinic) => (
+                    <span
+                      key={clinic.id}
+                      className="rounded bg-slate-700 px-1.5 py-0.5 text-[10px] text-slate-300"
+                    >
+                      {clinic.name}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
         </nav>
 
-        {/* Role indicator and clinic selector */}
-        <div className="absolute bottom-24 left-4 right-4 space-y-3">
-          {/* Role badge */}
-          <div className={clsx(
-            'rounded-lg p-3',
-            isAdmin ? 'bg-dental-500/20' : isStaff ? 'bg-amber-500/20' : 'bg-blue-500/20'
-          )}>
-            <div className="flex items-center gap-2">
-              <UserCircle className={clsx(
-                'h-5 w-5',
-                isAdmin ? 'text-dental-400' : isStaff ? 'text-amber-400' : 'text-blue-400'
-              )} />
-              <div>
-                <p className={clsx(
-                  'text-sm font-medium',
-                  isAdmin ? 'text-dental-400' : isStaff ? 'text-amber-400' : 'text-blue-400'
-                )}>
-                  {user?.role ? getRoleLabel(user.role) : 'User'}
-                </p>
-                <p className="text-xs text-slate-400">
-                  {isAdmin ? 'Full CRM Access' : isStaff ? 'Appointments Only' : 'Lead Management'}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Clinic selector (for admin) */}
-          {isAdmin && user?.clinics && user.clinics.length > 0 && (
-            <div className="rounded-lg bg-slate-800 p-3">
-              <div className="mb-2 flex items-center gap-2 text-xs text-slate-400">
-                <Building2 className="h-4 w-4" />
-                <span>Clinics</span>
-              </div>
-              <div className="flex flex-wrap gap-1">
-                {user.clinics.map((clinic) => (
-                  <span
-                    key={clinic.id}
-                    className="rounded bg-slate-700 px-2 py-1 text-xs text-slate-300"
-                  >
-                    {clinic.name}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Clinic info for staff (read-only) */}
-          {isStaff && user?.location && (
-            <div className="rounded-lg bg-slate-800 p-3">
-              <div className="flex items-center gap-2 text-xs text-slate-400">
-                <Building2 className="h-4 w-4" />
-                <span>Your Clinic</span>
-              </div>
-              <p className="mt-1 text-sm font-medium capitalize text-slate-300">
-                {user.location.replace(/-/g, ' ')}
-              </p>
-            </div>
-          )}
-        </div>
-
-        {/* User menu */}
-        <div className="absolute bottom-4 left-4 right-4">
+        {/* Sign out */}
+        <div className="absolute bottom-0 left-0 right-0 border-t border-slate-700 px-3 py-2">
           <button
             onClick={() => logout()}
-            className="flex w-full items-center gap-3 rounded-lg px-4 py-3 text-sm text-slate-400 transition-colors hover:bg-slate-800 hover:text-white"
+            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs text-slate-400 transition-colors hover:bg-slate-800 hover:text-white"
           >
-            <LogOut className="h-5 w-5" />
+            <LogOut className="h-4 w-4" />
             Sign Out
           </button>
         </div>
       </aside>
 
       {/* Main content */}
-      <div className="lg:pl-64">
+      <div className="lg:pl-56">
         {/* Top bar */}
-        <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-slate-200 bg-white/80 px-4 backdrop-blur-sm lg:px-8">
+        <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-slate-200 bg-white/80 px-4 backdrop-blur-sm lg:px-8">
           {/* Mobile menu button */}
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
@@ -230,9 +275,12 @@ export default function Layout({ children }: LayoutProps) {
             {sidebarOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
           </button>
 
-          {/* Page title - could be dynamic based on route */}
-          <h2 className="text-lg font-semibold text-slate-900 lg:text-xl">
-            {filteredNavItems.find(item => location.pathname.startsWith(item.path))?.label || 'Dashboard'}
+          {/* Page title */}
+          <h2 className="text-lg font-semibold text-slate-900">
+            {filteredNavItems.find(item =>
+              location.pathname === item.path ||
+              (item.path !== '/' && location.pathname.startsWith(item.path + '/'))
+            )?.label || 'Dashboard'}
           </h2>
 
           {/* User dropdown */}
@@ -253,7 +301,7 @@ export default function Layout({ children }: LayoutProps) {
 
             {userMenuOpen && (
               <>
-                <div 
+                <div
                   className="fixed inset-0 z-40"
                   onClick={() => setUserMenuOpen(false)}
                 />
