@@ -1,0 +1,44 @@
+{{- if .Values.expenseFrontend.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "dentacrm.fullname" . }}-expense-frontend
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "dentacrm.labels" . | nindent 4 }}
+    app.kubernetes.io/component: expense-frontend
+spec:
+  replicas: {{ .Values.expenseFrontend.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "dentacrm.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: expense-frontend
+  template:
+    metadata:
+      labels:
+        {{- include "dentacrm.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: expense-frontend
+    spec:
+      serviceAccountName: {{ include "dentacrm.serviceAccountName" . }}
+      containers:
+        - name: expense-frontend
+          image: {{ include "dentacrm.image" (dict "Values" .Values "repository" .Values.expenseFrontend.image.repository "tag" .Values.expenseFrontend.image.tag) }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - containerPort: 80
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          resources:
+            {{- toYaml .Values.expenseFrontend.resources | nindent 12 }}
+{{- end }}

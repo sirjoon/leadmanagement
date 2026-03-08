@@ -1,0 +1,33 @@
+# Blue cluster infrastructure values (ap-south-1)
+aws:
+  region: ap-south-1
+  externalDnsRoleArn: ""  # Set from terraform output
+  certManagerRoleArn: ""  # Set from terraform output
+
+domain: geekzlabs.com
+email: admin@geekzlabs.com
+
+emissary-ingress:
+  enabled: true
+  replicaCount: 1
+  service:
+    type: LoadBalancer
+    annotations:
+      service.beta.kubernetes.io/aws-load-balancer-type: nlb
+      service.beta.kubernetes.io/aws-load-balancer-scheme: internet-facing
+      service.beta.kubernetes.io/aws-load-balancer-cross-zone-load-balancing-enabled: "true"
+
+cert-manager:
+  enabled: true
+  installCRDs: true
+
+external-dns:
+  enabled: true
+  provider: aws
+  domainFilters:
+    - geekzlabs.com
+  aws:
+    region: ap-south-1
+    zoneType: public
+  policy: sync
+  txtOwnerId: dentacrm-blue-external-dns

@@ -1,0 +1,14 @@
+{{- if .Values.expenseApi.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "dentacrm.fullname" . }}-expense-config
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "dentacrm.labels" . | nindent 4 }}
+    app.kubernetes.io/component: expense-api
+data:
+  NODE_ENV: {{ .Values.global.environment | default "production" }}
+  PORT: "3001"
+  FRONTEND_URL: "https://accounts.{{ .Values.global.domain }}"
+{{- end }}

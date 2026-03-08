@@ -1,0 +1,20 @@
+{{- if .Values.expenseApi.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "dentacrm.fullname" . }}-expense-api
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "dentacrm.labels" . | nindent 4 }}
+    app.kubernetes.io/component: expense-api
+spec:
+  type: ClusterIP
+  ports:
+    - port: {{ .Values.expenseApi.service.port }}
+      targetPort: 3001
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "dentacrm.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: expense-api
+{{- end }}

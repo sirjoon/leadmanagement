@@ -83,4 +83,31 @@ spec:
                 port:
                   number: {{ $.Values.frontend.service.port }}
     {{- end }}
+    {{- if .Values.expenseApi.enabled }}
+    # Expense Tracker - accounts.{{ .Values.global.domain }}
+    - host: "accounts.{{ .Values.global.domain }}"
+      http:
+        paths:
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "dentacrm.fullname" . }}-expense-api
+                port:
+                  number: {{ .Values.expenseApi.service.port }}
+          - path: /health
+            pathType: Exact
+            backend:
+              service:
+                name: {{ include "dentacrm.fullname" . }}-expense-api
+                port:
+                  number: {{ .Values.expenseApi.service.port }}
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "dentacrm.fullname" . }}-expense-frontend
+                port:
+                  number: {{ .Values.expenseFrontend.service.port }}
+    {{- end }}
 {{- end }}

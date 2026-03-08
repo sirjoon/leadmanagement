@@ -1,0 +1,75 @@
+# Green cluster values (us-east-1, 2 nodes, VPC CNI)
+# For replicating green from blue cluster setup
+global:
+  domain: dentacrm.geekzlabs.com
+  environment: green
+
+namespace: dentacrm
+
+image:
+  registry: "675045716724.dkr.ecr.us-east-1.amazonaws.com"
+  pullPolicy: Always
+
+ambassador:
+  enabled: true
+
+canary:
+  enabled: false
+
+api:
+  replicaCount: 2
+  image:
+    tag: "green-latest"
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 5
+  pdb:
+    enabled: true
+    minAvailable: 1
+
+frontend:
+  replicaCount: 2
+  image:
+    tag: "green-latest"
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 3
+
+ingress:
+  enabled: true
+  tls:
+    - secretName: dentacrm-tls
+      hosts:
+        - dentacrm.geekzlabs.com
+
+postgresql:
+  enabled: true
+  auth:
+    postgresPassword: ""
+    database: dentacrm
+  primary:
+    persistence:
+      enabled: true
+      size: 10Gi
+      storageClass: gp2
+
+serviceAccount:
+  create: true
+  name: dentacrm-sa
+  annotations:
+    eks.amazonaws.com/role-arn: ""
+
+affinity:
+  podAntiAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          labelSelector:
+            matchExpressions:
+              - key: app
+                operator: In
+                values:
+                  - dentacrm-api
+          topologyKey: kubernetes.io/hostname

@@ -1,0 +1,16 @@
+{{- if .Values.ambassador.enabled }}
+apiVersion: getambassador.io/v3alpha1
+kind: Host
+metadata:
+  name: {{ include "dentacrm.fullname" . }}-host
+  namespace: {{ .Values.namespace }}
+spec:
+  hostname: {{ .Values.global.domain }}
+  acmeProvider:
+    authority: none
+  tlsSecret:
+    name: {{ (index .Values.ingress.tls 0).secretName }}
+  requestPolicy:
+    insecure:
+      action: Redirect
+{{- end }}

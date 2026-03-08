@@ -1,0 +1,27 @@
+{{- if .Values.ambassador.enabled }}
+apiVersion: getambassador.io/v3alpha1
+kind: Listener
+metadata:
+  name: {{ include "dentacrm.fullname" . }}-https
+  namespace: {{ .Values.namespace }}
+spec:
+  port: 8443
+  protocol: HTTPS
+  securityModel: XFP
+  hostBinding:
+    namespace:
+      from: ALL
+---
+apiVersion: getambassador.io/v3alpha1
+kind: Listener
+metadata:
+  name: {{ include "dentacrm.fullname" . }}-http
+  namespace: {{ .Values.namespace }}
+spec:
+  port: 8080
+  protocol: HTTP
+  securityModel: XFP
+  hostBinding:
+    namespace:
+      from: ALL
+{{- end }}

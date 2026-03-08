@@ -210,7 +210,7 @@ TREATMENT PLAN/NOTES SYNC:
 
 ---
 
-## Story 5: Visited Tab — STATUS: PENDING
+## Story 5: Visited Tab — STATUS: COMPLETED ✅
 
 **Size:** Large | **Priority:** 5 | **Dependencies:** Stories 1, 2, 3, 4
 
@@ -530,7 +530,7 @@ ROLE-BASED VIEW:
 
 ---
 
-## Story 11: Enterprise Responsive Navigation — STATUS: PENDING
+## Story 11: Enterprise Responsive Navigation — STATUS: COMPLETED ✅
 
 **Size:** Medium | **Priority:** Can be done alongside Story 5
 
@@ -585,8 +585,8 @@ Reports tab already exists. Only change:
 | 2 | Story 2 - Label changes (Visited, Lost, phone, remove Attempting) | Small | COMPLETED ✅ |
 | 3 | Story 3 - DNR confirmation dialog (reusable component) | Medium | COMPLETED ✅ |
 | 4 | Story 4 - Full sync (clinic↔admin↔lead + auto-refresh) | Medium | COMPLETED ✅ |
-| 5 | Story 11 - Responsive navigation (9 tabs) | Medium | PENDING |
-| 6 | Story 5 - Visited Tab | Large | PENDING |
+| 5 | Story 11 - Responsive navigation (9 tabs) | Medium | COMPLETED ✅ |
+| 6 | Story 5 - Visited Tab | Large | COMPLETED ✅ |
 | 7 | Story 6 - Treatment Tab | Large | PENDING |
 | 8 | Story 7 - Treatment Denied Tab | Medium | PENDING |
 | 9 | Story 8 - Follow-ups Tab (cross-cutting) | Large | PENDING |

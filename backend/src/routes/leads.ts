@@ -13,6 +13,12 @@ import { LeadStatus, Priority, LeadSource } from '@prisma/client';
 
 const router = Router();
 
+// Patient-journey statuses that clinic staff can access via journey tabs
+// (Visited, Treatment, Treatment Denied, DNR/DNC, Lost)
+const PATIENT_JOURNEY_STATUSES: LeadStatus[] = [
+  'VISITED', 'TREATMENT_STARTED', 'TREATMENT_DENIED', 'LOST', 'DNR', 'DNC', 'TWC',
+];
+
 // Validation schemas
 const createLeadSchema = z.object({
   name: z.string().min(1),
@@ -80,14 +86,17 @@ router.get('/', asyncHandler(async (req: AuthenticatedRequest, res: Response) =>
     return;
   }
 
-  // CLINIC_STAFF cannot access leads (User Story C4)
+  // CLINIC_STAFF: only allowed for patient-journey statuses, scoped to their clinic
   if (isClinicStaff(req.tenant.role)) {
-    res.status(403).json({ 
-      error: 'Access denied',
-      message: 'Clinic staff do not have access to lead management. Please use the Appointments section.',
-      code: 'CLINIC_STAFF_NO_LEAD_ACCESS'
-    });
-    return;
+    const requestedStatus = req.query.status as string | undefined;
+    if (!requestedStatus || !PATIENT_JOURNEY_STATUSES.includes(requestedStatus as LeadStatus)) {
+      res.status(403).json({
+        error: 'Access denied',
+        message: 'Clinic staff do not have access to lead management. Please use the Appointments section.',
+        code: 'CLINIC_STAFF_NO_LEAD_ACCESS'
+      });
+      return;
+    }
   }
 
   const filters = leadFiltersSchema.parse(req.query);
@@ -102,6 +111,16 @@ router.get('/', asyncHandler(async (req: AuthenticatedRequest, res: Response) =>
   // LEAD_USER can only see assigned leads (User Story L1)
   if (isLeadUser(req.tenant.role)) {
     where.assignedUserId = req.tenant.userId;
+  }
+
+  // CLINIC_STAFF: scope to their clinic
+  if (isClinicStaff(req.tenant.role) && req.tenant.location) {
+    const staffClinic = await req.db.clinic.findFirst({
+      where: { tenantId: req.tenant.id, slug: req.tenant.location },
+    });
+    if (staffClinic) {
+      where.clinicId = staffClinic.id;
+    }
   }
 
   // Apply filters
@@ -339,16 +358,6 @@ router.get('/:id', asyncHandler(async (req: AuthenticatedRequest, res: Response)
     return;
   }
 
-  // CLINIC_STAFF cannot access leads (User Story C4)
-  if (isClinicStaff(req.tenant.role)) {
-    res.status(403).json({ 
-      error: 'Access denied',
-      message: 'Clinic staff do not have access to lead details.',
-      code: 'CLINIC_STAFF_NO_LEAD_ACCESS'
-    });
-    return;
-  }
-
   const lead = await req.db.lead.findFirst({
     where: {
       id: req.params.id,
@@ -378,7 +387,7 @@ router.get('/:id', asyncHandler(async (req: AuthenticatedRequest, res: Response)
   });
 
   if (!lead) {
-    res.status(404).json({ 
+    res.status(404).json({
       error: 'Lead not found',
       message: 'The requested lead does not exist or has been deleted.',
       code: 'LEAD_NOT_FOUND'
@@ -389,7 +398,7 @@ router.get('/:id', asyncHandler(async (req: AuthenticatedRequest, res: Response)
   // LEAD_USER access check (User Story L1)
   if (isLeadUser(req.tenant.role)) {
     if (lead.assignedUserId !== req.tenant.userId) {
-      res.status(403).json({ 
+      res.status(403).json({
         error: 'Access denied',
         message: 'You can only view leads assigned to you.',
         code: 'NOT_ASSIGNED_LEAD'
@@ -398,14 +407,38 @@ router.get('/:id', asyncHandler(async (req: AuthenticatedRequest, res: Response)
     }
   }
 
+  // CLINIC_STAFF: only allowed for patient-journey statuses, scoped to clinic
+  if (isClinicStaff(req.tenant.role)) {
+    if (!PATIENT_JOURNEY_STATUSES.includes(lead.status)) {
+      res.status(403).json({
+        error: 'Access denied',
+        message: 'Clinic staff do not have access to lead details.',
+        code: 'CLINIC_STAFF_NO_LEAD_ACCESS'
+      });
+      return;
+    }
+    // Verify lead belongs to staff's clinic
+    if (req.tenant.location) {
+      const staffClinic = await req.db.clinic.findFirst({
+        where: { tenantId: req.tenant.id, slug: req.tenant.location },
+      });
+      if (staffClinic && lead.clinicId !== staffClinic.id) {
+        res.status(403).json({ error: 'Access denied', code: 'CLINIC_MISMATCH' });
+        return;
+      }
+    }
+  }
+
   // Include role-specific metadata
+  const isStaff = isClinicStaff(req.tenant.role);
   const roleMetadata = {
-    canEdit: isAdminUser(req.tenant.role) || 
-             (isLeadUser(req.tenant.role) && lead.assignedUserId === req.tenant.userId),
+    canEdit: isAdminUser(req.tenant.role) ||
+             (isLeadUser(req.tenant.role) && lead.assignedUserId === req.tenant.userId) ||
+             isStaff,
     canViewStatusHistory: isAdminUser(req.tenant.role),
     canAssignLead: isAdminUser(req.tenant.role),
     canDeleteLead: isAdminUser(req.tenant.role),
-    isLastContactReadOnly: isLeadUser(req.tenant.role), // User Story L4
+    isLastContactReadOnly: isLeadUser(req.tenant.role) || isStaff, // User Story L4
   };
 
   res.json({ 
@@ -480,16 +513,6 @@ router.patch('/:id', asyncHandler(async (req: AuthenticatedRequest, res: Respons
     return;
   }
 
-  // CLINIC_STAFF cannot access leads (User Story C4)
-  if (isClinicStaff(req.tenant.role)) {
-    res.status(403).json({ 
-      error: 'Access denied',
-      message: 'Clinic staff do not have access to lead management.',
-      code: 'CLINIC_STAFF_NO_LEAD_ACCESS'
-    });
-    return;
-  }
-
   const data = updateLeadSchema.parse(req.body);
 
   // Find existing lead
@@ -502,7 +525,7 @@ router.patch('/:id', asyncHandler(async (req: AuthenticatedRequest, res: Respons
   });
 
   if (!existingLead) {
-    res.status(404).json({ 
+    res.status(404).json({
       error: 'Lead not found',
       message: 'The requested lead does not exist or has been deleted.',
       code: 'LEAD_NOT_FOUND'
@@ -510,21 +533,54 @@ router.patch('/:id', asyncHandler(async (req: AuthenticatedRequest, res: Respons
     return;
   }
 
+  // CLINIC_STAFF: only for patient-journey leads in their clinic
+  if (isClinicStaff(req.tenant.role)) {
+    if (!PATIENT_JOURNEY_STATUSES.includes(existingLead.status)) {
+      res.status(403).json({
+        error: 'Access denied',
+        message: 'Clinic staff do not have access to lead management.',
+        code: 'CLINIC_STAFF_NO_LEAD_ACCESS'
+      });
+      return;
+    }
+    // Verify clinic match
+    if (req.tenant.location) {
+      const staffClinic = await req.db.clinic.findFirst({
+        where: { tenantId: req.tenant.id, slug: req.tenant.location },
+      });
+      if (staffClinic && existingLead.clinicId !== staffClinic.id) {
+        res.status(403).json({ error: 'Access denied', code: 'CLINIC_MISMATCH' });
+        return;
+      }
+    }
+    // Clinic staff can only change status or add treatment notes/follow-up
+    const allowedStaffFields = ['status', 'treatmentPlan', 'treatmentNotes', 'followUp', 'followUpDate', 'notes'];
+    const requestedFields = Object.keys(data);
+    const disallowed = requestedFields.filter(f => !allowedStaffFields.includes(f));
+    if (disallowed.length > 0) {
+      res.status(403).json({
+        error: 'Permission denied',
+        message: `Clinic staff cannot modify: ${disallowed.join(', ')}`,
+      });
+      return;
+    }
+  }
+
   // LEAD_USER access check (User Story L1)
   if (isLeadUser(req.tenant.role)) {
     // Lead users can only update their assigned leads
     if (existingLead.assignedUserId !== req.tenant.userId) {
-      res.status(403).json({ 
+      res.status(403).json({
         error: 'Access denied',
         message: 'You can only update leads assigned to you.',
         code: 'NOT_ASSIGNED_LEAD'
       });
       return;
     }
-    
+
     // Lead users cannot reassign leads (User Story L1)
     if (data.clinicId !== undefined) {
-      res.status(403).json({ 
+      res.status(403).json({
         error: 'Permission denied',
         message: 'Only administrators can reassign leads to different clinics.',
         code: 'REASSIGN_NOT_ALLOWED'

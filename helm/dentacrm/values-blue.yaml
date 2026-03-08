@@ -1,0 +1,58 @@
+# Blue cluster values (ap-south-1, 1 node, Calico CNI)
+global:
+  domain: dentacrm.geekzlabs.com
+  environment: blue
+
+namespace: dentacrm
+
+image:
+  registry: "675045716724.dkr.ecr.ap-south-1.amazonaws.com"
+  pullPolicy: Always
+
+ambassador:
+  enabled: true
+
+canary:
+  enabled: false
+
+api:
+  replicaCount: 1
+  image:
+    tag: "blue-latest"
+  autoscaling:
+    enabled: false
+  pdb:
+    enabled: false
+
+frontend:
+  replicaCount: 1
+  image:
+    tag: "blue-latest"
+  autoscaling:
+    enabled: false
+
+ingress:
+  enabled: true  # kept for TLS config reference by Ambassador Host
+  tls:
+    - secretName: dentacrm-tls
+      hosts:
+        - dentacrm.geekzlabs.com
+
+postgresql:
+  enabled: true
+  auth:
+    postgresPassword: "dentacrm-blue-2026"
+    database: dentacrm
+  primary:
+    persistence:
+      enabled: true
+      size: 10Gi
+      storageClass: gp2
+
+serviceAccount:
+  create: true
+  name: dentacrm-sa
+  annotations:
+    eks.amazonaws.com/role-arn: ""
+
+affinity: {}

@@ -1,0 +1,92 @@
+{{- if .Values.ambassador.enabled }}
+# Health endpoint - always routes to stable API
+apiVersion: getambassador.io/v3alpha1
+kind: Mapping
+metadata:
+  name: {{ include "dentacrm.fullname" . }}-health
+  namespace: {{ .Values.namespace }}
+spec:
+  hostname: {{ .Values.global.domain }}
+  prefix: /health
+  rewrite: /health
+  service: {{ include "dentacrm.fullname" . }}-api:{{ .Values.api.service.port }}
+---
+apiVersion: getambassador.io/v3alpha1
+kind: Mapping
+metadata:
+  name: {{ include "dentacrm.fullname" . }}-ready
+  namespace: {{ .Values.namespace }}
+spec:
+  hostname: {{ .Values.global.domain }}
+  prefix: /ready
+  rewrite: /ready
+  service: {{ include "dentacrm.fullname" . }}-api:{{ .Values.api.service.port }}
+---
+# API Mapping - Stable
+apiVersion: getambassador.io/v3alpha1
+kind: Mapping
+metadata:
+  name: {{ include "dentacrm.fullname" . }}-api-stable
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "dentacrm.labels" . | nindent 4 }}
+    version: stable
+spec:
+  hostname: {{ .Values.global.domain }}
+  prefix: /api/
+  service: {{ include "dentacrm.fullname" . }}-api:{{ .Values.api.service.port }}
+  {{- if .Values.canary.enabled }}
+  weight: {{ .Values.canary.stableWeight }}
+  {{- end }}
+  timeout_ms: 30000
+---
+# Frontend Mapping - Stable
+apiVersion: getambassador.io/v3alpha1
+kind: Mapping
+metadata:
+  name: {{ include "dentacrm.fullname" . }}-frontend-stable
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "dentacrm.labels" . | nindent 4 }}
+    version: stable
+spec:
+  hostname: {{ .Values.global.domain }}
+  prefix: /
+  service: {{ include "dentacrm.fullname" . }}-frontend:{{ .Values.frontend.service.port }}
+  {{- if .Values.canary.enabled }}
+  weight: {{ .Values.canary.stableWeight }}
+  {{- end }}
+{{- if .Values.canary.enabled }}
+---
+# API Mapping - Canary
+apiVersion: getambassador.io/v3alpha1
+kind: Mapping
+metadata:
+  name: {{ include "dentacrm.fullname" . }}-api-canary
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "dentacrm.labels" . | nindent 4 }}
+    version: canary
+spec:
+  hostname: {{ .Values.global.domain }}
+  prefix: /api/
+  service: {{ include "dentacrm.fullname" . }}-api-canary:{{ .Values.api.service.port }}
+  weight: {{ .Values.canary.canaryWeight }}
+  timeout_ms: 30000
+---
+# Frontend Mapping - Canary
+apiVersion: getambassador.io/v3alpha1
+kind: Mapping
+metadata:
+  name: {{ include "dentacrm.fullname" . }}-frontend-canary
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "dentacrm.labels" . | nindent 4 }}
+    version: canary
+spec:
+  hostname: {{ .Values.global.domain }}
+  prefix: /
+  service: {{ include "dentacrm.fullname" . }}-frontend-canary:{{ .Values.frontend.service.port }}
+  weight: {{ .Values.canary.canaryWeight }}
+{{- end }}
+{{- end }}

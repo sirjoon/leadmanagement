@@ -1,0 +1,49 @@
+{{- if .Values.expenseApi.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "dentacrm.fullname" . }}-expense-api
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "dentacrm.labels" . | nindent 4 }}
+    app.kubernetes.io/component: expense-api
+spec:
+  replicas: {{ .Values.expenseApi.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "dentacrm.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: expense-api
+  template:
+    metadata:
+      labels:
+        {{- include "dentacrm.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: expense-api
+    spec:
+      serviceAccountName: {{ include "dentacrm.serviceAccountName" . }}
+      containers:
+        - name: expense-api
+          image: {{ include "dentacrm.image" (dict "Values" .Values "repository" .Values.expenseApi.image.repository "tag" .Values.expenseApi.image.tag) }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - containerPort: 3001
+              protocol: TCP
+          envFrom:
+            - configMapRef:
+                name: {{ include "dentacrm.fullname" . }}-expense-config
+            - secretRef:
+                name: {{ include "dentacrm.fullname" . }}-expense-secrets
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 3001
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 3001
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          resources:
+            {{- toYaml .Values.expenseApi.resources | nindent 12 }}
+{{- end }}
