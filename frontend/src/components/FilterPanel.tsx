@@ -17,7 +17,6 @@ interface Clinic {
 
 const statuses: { value: LeadStatus; label: string; icon: string }[] = [
   { value: 'NEW', label: 'New', icon: '📋' },
-  { value: 'ATTEMPTING', label: 'Attempting', icon: '📞' },
   { value: 'CONNECTED', label: 'Connected', icon: '✓' },
   { value: 'APPOINTMENT_BOOKED', label: 'Booked', icon: '📅' },
   { value: 'RESCHEDULED', label: 'Rescheduled', icon: '🔄' },
