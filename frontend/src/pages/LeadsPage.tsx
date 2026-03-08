@@ -13,6 +13,8 @@ import { clsx } from 'clsx';
 import LeadCard from '../components/LeadCard';
 import CreateLeadModal from '../components/CreateLeadModal';
 import FilterPanel from '../components/FilterPanel';
+import LastUpdated from '../components/LastUpdated';
+import { useAutoRefresh } from '../hooks/useAutoRefresh';
 
 
 export default function LeadsPage() {
@@ -67,6 +69,8 @@ export default function LeadsPage() {
     }
   };
 
+  const { lastUpdatedText, refresh: autoRefresh } = useAutoRefresh(handleRefresh);
+
 
   return (
     <div className="space-y-6">
@@ -74,9 +78,12 @@ export default function LeadsPage() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="font-display text-2xl font-bold text-slate-900">Leads</h1>
-          <p className="text-sm text-slate-500">
-            {pagination.total} total leads • Page {pagination.page} of {pagination.totalPages || 1}
-          </p>
+          <div className="flex items-center gap-3">
+            <p className="text-sm text-slate-500">
+              {pagination.total} total leads • Page {pagination.page} of {pagination.totalPages || 1}
+            </p>
+            <LastUpdated text={lastUpdatedText} onRefresh={autoRefresh} />
+          </div>
         </div>
 
         <div className="flex items-center gap-3">

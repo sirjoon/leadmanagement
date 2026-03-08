@@ -9,15 +9,17 @@ import {
 } from 'lucide-react';
 import { api } from '../api/client';
 import { clsx } from 'clsx';
+import LastUpdated from '../components/LastUpdated';
+import { useAutoRefresh } from '../hooks/useAutoRefresh';
 
 type AppointmentStatus = 'SCHEDULED' | 'CONFIRMED' | 'COMPLETED' | 'CANCELLED' | 'NO_SHOW' | 'RESCHEDULED' | 'DNR' | 'TWC';
 
 const statusConfig: Record<AppointmentStatus, { label: string; color: string; bgColor: string; icon: React.ElementType }> = {
   SCHEDULED: { label: 'Scheduled', color: 'text-blue-700', bgColor: 'bg-blue-100', icon: Clock },
   CONFIRMED: { label: 'Confirmed', color: 'text-green-700', bgColor: 'bg-green-100', icon: CheckCircle2 },
-  COMPLETED: { label: 'Completed', color: 'text-emerald-700', bgColor: 'bg-emerald-100', icon: CheckCircle2 },
+  COMPLETED: { label: 'Visited', color: 'text-emerald-700', bgColor: 'bg-emerald-100', icon: CheckCircle2 },
   CANCELLED: { label: 'Cancelled', color: 'text-slate-700', bgColor: 'bg-slate-100', icon: XCircle },
-  NO_SHOW: { label: 'No Show', color: 'text-red-700', bgColor: 'bg-red-100', icon: XCircle },
+  NO_SHOW: { label: 'Lost', color: 'text-red-700', bgColor: 'bg-red-100', icon: XCircle },
   RESCHEDULED: { label: 'Rescheduled', color: 'text-amber-700', bgColor: 'bg-amber-100', icon: RefreshCw },
   DNR: { label: 'DNR', color: 'text-orange-700', bgColor: 'bg-orange-100', icon: PhoneOff },
   TWC: { label: 'TWC', color: 'text-purple-700', bgColor: 'bg-purple-100', icon: PhoneCall },
@@ -94,6 +96,8 @@ export default function StaffSummaryPage() {
     }
   };
 
+  const { lastUpdatedText, refresh: autoRefresh } = useAutoRefresh(fetchSummary);
+
   useEffect(() => {
     fetchSummary();
   }, []);
@@ -134,7 +138,10 @@ export default function StaffSummaryPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="font-display text-2xl font-bold text-slate-900">Summary</h1>
-          <p className="text-sm text-slate-500">{format(new Date(), 'EEEE, MMMM d, yyyy')}</p>
+          <div className="flex items-center gap-3">
+            <p className="text-sm text-slate-500">{format(new Date(), 'EEEE, MMMM d, yyyy')}</p>
+            <LastUpdated text={lastUpdatedText} onRefresh={autoRefresh} />
+          </div>
         </div>
         <button
           onClick={fetchSummary}
@@ -224,8 +231,8 @@ export default function StaffSummaryPage() {
               {[
                 { label: 'Scheduled', value: today.stats.scheduled, color: 'text-blue-600 bg-blue-50' },
                 { label: 'Confirmed', value: today.stats.confirmed, color: 'text-green-600 bg-green-50' },
-                { label: 'Completed', value: today.stats.completed, color: 'text-emerald-600 bg-emerald-50' },
-                { label: 'No Show', value: today.stats.noShow, color: 'text-red-600 bg-red-50' },
+                { label: 'Visited', value: today.stats.completed, color: 'text-emerald-600 bg-emerald-50' },
+                { label: 'Lost', value: today.stats.noShow, color: 'text-red-600 bg-red-50' },
               ].map((item) => (
                 <div key={item.label} className={clsx('rounded-lg p-3 text-center', item.color)}>
                   <p className="text-xl font-bold">{item.value}</p>
@@ -271,7 +278,7 @@ export default function StaffSummaryPage() {
           </div>
           <div className="mt-3 flex items-center justify-center gap-4 text-[11px] text-slate-400">
             <span className="flex items-center gap-1"><span className="inline-block h-2 w-2 rounded bg-slate-200" /> Total</span>
-            <span className="flex items-center gap-1"><span className="inline-block h-2 w-2 rounded bg-emerald-500" /> Completed</span>
+            <span className="flex items-center gap-1"><span className="inline-block h-2 w-2 rounded bg-emerald-500" /> Visited</span>
           </div>
         </div>
       </div>
@@ -286,8 +293,8 @@ export default function StaffSummaryPage() {
             { label: 'Total', value: month.stats.total, color: 'text-slate-700 bg-slate-100' },
             { label: 'Scheduled', value: month.stats.scheduled, color: 'text-blue-700 bg-blue-100' },
             { label: 'Confirmed', value: month.stats.confirmed, color: 'text-green-700 bg-green-100' },
-            { label: 'Completed', value: month.stats.completed, color: 'text-emerald-700 bg-emerald-100' },
-            { label: 'No Show', value: month.stats.noShow, color: 'text-red-700 bg-red-100' },
+            { label: 'Visited', value: month.stats.completed, color: 'text-emerald-700 bg-emerald-100' },
+            { label: 'Lost', value: month.stats.noShow, color: 'text-red-700 bg-red-100' },
             { label: 'Rescheduled', value: month.stats.rescheduled, color: 'text-amber-700 bg-amber-100' },
             { label: 'DNR', value: month.stats.dnr, color: 'text-orange-700 bg-orange-100' },
             { label: 'TWC', value: month.stats.twc, color: 'text-purple-700 bg-purple-100' },

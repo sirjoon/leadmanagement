@@ -8,6 +8,8 @@ import { formatDateInputIST } from '../utils/formatDate';
 import { formatDateIST } from '../utils/formatDate';
 import { useAuthStore, isClinicStaffRole } from '../store/authStore';
 import StaffDashboard from '../components/StaffDashboard';
+import LastUpdated from '../components/LastUpdated';
+import { useAutoRefresh } from '../hooks/useAutoRefresh';
 
 interface Appointment {
   id: string;
@@ -111,6 +113,8 @@ function AppointmentsCalendar() {
     );
   };
 
+  const { lastUpdatedText, refresh: autoRefresh } = useAutoRefresh(fetchAppointments);
+
   const goToPreviousWeek = () => setCurrentWeekStart(subWeeks(currentWeekStart, 1));
   const goToNextWeek = () => setCurrentWeekStart(addWeeks(currentWeekStart, 1));
   const goToToday = () => setCurrentWeekStart(startOfWeek(new Date(), { weekStartsOn: 1 }));
@@ -146,9 +150,12 @@ function AppointmentsCalendar() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="font-display text-2xl font-bold text-slate-900">Appointments</h1>
-          <p className="text-sm text-slate-500">
-            {format(currentWeekStart, 'MMM d')} - {format(weekEnd, 'MMM d, yyyy')}
-          </p>
+          <div className="flex items-center gap-3">
+            <p className="text-sm text-slate-500">
+              {format(currentWeekStart, 'MMM d')} - {format(weekEnd, 'MMM d, yyyy')}
+            </p>
+            <LastUpdated text={lastUpdatedText} onRefresh={autoRefresh} />
+          </div>
         </div>
 
         <div className="flex items-center gap-2">

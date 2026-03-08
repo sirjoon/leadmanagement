@@ -32,6 +32,8 @@ import {
 import { api } from '../api/client';
 import { clsx } from 'clsx';
 import DNRConfirmDialog from './DNRConfirmDialog';
+import LastUpdated from './LastUpdated';
+import { useAutoRefresh } from '../hooks/useAutoRefresh';
 
 interface Lead {
   id: string;
@@ -175,6 +177,8 @@ export default function StaffDashboard() {
       setLoading(false);
     }
   }, [currentMonth]);
+
+  const { lastUpdatedText, refresh: autoRefresh } = useAutoRefresh(fetchAppointments);
 
   useEffect(() => {
     fetchAppointments();
@@ -390,6 +394,7 @@ export default function StaffDashboard() {
               `${visitedAppointments.length} completed visits this month`
             )}
           </p>
+          <LastUpdated text={lastUpdatedText} onRefresh={autoRefresh} />
         </div>
         <button
           onClick={fetchAppointments}

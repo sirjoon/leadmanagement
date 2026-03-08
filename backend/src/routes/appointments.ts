@@ -669,6 +669,15 @@ router.patch('/:id', asyncHandler(async (req: AuthenticatedRequest, res: Respons
       COMPLETED: 'VISITED',
       NO_SHOW: 'LOST',
       DNR: 'DNR',
+      RESCHEDULED: 'RESCHEDULED',
+      TWC: 'TWC',
+    };
+    const statusReasonMap: Record<string, string> = {
+      COMPLETED: 'Visited',
+      NO_SHOW: 'Lost',
+      DNR: 'DNR',
+      RESCHEDULED: 'Rescheduled',
+      TWC: 'TWC (Will Call Back)',
     };
     const newLeadStatus = leadStatusMap[data.status];
     if (newLeadStatus) {
@@ -687,7 +696,7 @@ router.patch('/:id', asyncHandler(async (req: AuthenticatedRequest, res: Respons
             fromStatus: currentLead.status,
             toStatus: newLeadStatus,
             changedBy: req.tenant.userId,
-            reason: `Appointment marked as ${data.status === 'NO_SHOW' ? 'Lost' : data.status === 'DNR' ? 'DNR' : 'Visited'}`,
+            reason: `Appointment marked as ${statusReasonMap[data.status] || data.status}`,
           },
         });
       }
