@@ -172,7 +172,7 @@ After DNR confirmed:
 
 ---
 
-## Story 4: Clinic <-> Admin <-> Lead Full Sync — STATUS: PENDING
+## Story 4: Clinic <-> Admin <-> Lead Full Sync — STATUS: COMPLETED ✅
 
 **Size:** Medium | **Priority:** 4 | **Dependencies:** Story 1
 
@@ -584,7 +584,7 @@ Reports tab already exists. Only change:
 | 1 | Story 1 - Schema (lastContactDate, followUp, TREATMENT_DENIED) | Medium | COMPLETED ✅ |
 | 2 | Story 2 - Label changes (Visited, Lost, phone, remove Attempting) | Small | COMPLETED ✅ |
 | 3 | Story 3 - DNR confirmation dialog (reusable component) | Medium | COMPLETED ✅ |
-| 4 | Story 4 - Full sync (clinic↔admin↔lead + auto-refresh) | Medium | PENDING |
+| 4 | Story 4 - Full sync (clinic↔admin↔lead + auto-refresh) | Medium | COMPLETED ✅ |
 | 5 | Story 11 - Responsive navigation (9 tabs) | Medium | PENDING |
 | 6 | Story 5 - Visited Tab | Large | PENDING |
 | 7 | Story 6 - Treatment Tab | Large | PENDING |
