@@ -1,0 +1,52 @@
+version: '3.8'
+
+# Dev environment containers - runs alongside prod on same EC2
+# Uses dentacrm-net (shared with prod) so nginx can route to both
+
+services:
+  # ── Dev Backend API ────────────────────────────────────────
+  api-dev:
+    image: 675045716724.dkr.ecr.ap-south-1.amazonaws.com/dentacrm-api:dev
+    container_name: dentacrm-api-dev
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DATABASE_URL: ${DEV_DATABASE_URL}
+      PLATFORM_DATABASE_URL: ${DEV_DATABASE_URL}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRY: ${JWT_EXPIRY:-24h}
+      FRONTEND_URL: https://dev.magiccrm.geekzlabs.com
+    expose:
+      - "3000"
+    networks:
+      - dentacrm-net
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '1.0'
+
+  # ── Dev Frontend ───────────────────────────────────────────
+  frontend-dev:
+    image: 675045716724.dkr.ecr.ap-south-1.amazonaws.com/dentacrm-frontend:dev
+    container_name: dentacrm-frontend-dev
+    restart: unless-stopped
+    expose:
+      - "80"
+    networks:
+      - dentacrm-net
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+          cpus: '0.5'
+
+networks:
+  dentacrm-net:
+    external: true
