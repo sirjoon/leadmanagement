@@ -39,15 +39,17 @@ export default function LeadsPage() {
   const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '');
 
   useEffect(() => {
+    // Clear any status filter from other tabs (shared store)
     const urlSearch = searchParams.get('search');
     if (urlSearch) {
       setSearchQuery(urlSearch);
-      setFilters({ search: urlSearch, page: 1 });
-      fetchLeads({ search: urlSearch, page: 1 });
+      setFilters({ search: urlSearch, status: undefined, page: 1 });
+      fetchLeads({ search: urlSearch, status: undefined, page: 1 });
       // Clear URL param after applying
       setSearchParams({}, { replace: true });
     } else {
-      fetchLeads();
+      setFilters({ status: undefined, page: 1 });
+      fetchLeads({ status: undefined, page: 1 });
     }
     if (isAdmin) {
       fetchTbdLeads();
