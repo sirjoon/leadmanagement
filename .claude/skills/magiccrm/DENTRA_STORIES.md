@@ -564,7 +564,7 @@ DESIGN REQUIREMENTS:
 
 ---
 
-## Story 12: Reports Tab (Hide from Clinic) — STATUS: PENDING
+## Story 12: Reports Tab (Hide from Clinic) — STATUS: COMPLETED ✅
 
 **Size:** Small | **Priority:** 12
 
@@ -592,7 +592,7 @@ Reports tab already exists. Only change:
 | 9 | Story 8 - Follow-ups Tab (cross-cutting) | Large | COMPLETED ✅ |
 | 10 | Story 9 - DNR/DNC Tab | Medium | COMPLETED ✅ |
 | 11 | Story 10 - Lost Tab | Medium | COMPLETED ✅ |
-| 12 | Story 12 - Reports (hide from clinic) | Small | PENDING |
+| 12 | Story 12 - Reports (hide from clinic) | Small | COMPLETED ✅ |
 
 ## Status Legend
 - NEW, ATTEMPTING, CONNECTED, APPOINTMENT_BOOKED — Leads Tab
