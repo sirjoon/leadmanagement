@@ -668,6 +668,7 @@ router.patch('/:id', asyncHandler(async (req: AuthenticatedRequest, res: Respons
     const leadStatusMap: Record<string, LeadStatus> = {
       COMPLETED: 'VISITED',
       NO_SHOW: 'LOST',
+      DNR: 'DNR',
     };
     const newLeadStatus = leadStatusMap[data.status];
     if (newLeadStatus) {
@@ -686,7 +687,7 @@ router.patch('/:id', asyncHandler(async (req: AuthenticatedRequest, res: Respons
             fromStatus: currentLead.status,
             toStatus: newLeadStatus,
             changedBy: req.tenant.userId,
-            reason: `Appointment marked as ${data.status === 'NO_SHOW' ? 'Lost' : 'Visited'}`,
+            reason: `Appointment marked as ${data.status === 'NO_SHOW' ? 'Lost' : data.status === 'DNR' ? 'DNR' : 'Visited'}`,
           },
         });
       }

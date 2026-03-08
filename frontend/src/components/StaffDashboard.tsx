@@ -31,6 +31,7 @@ import {
 } from 'lucide-react';
 import { api } from '../api/client';
 import { clsx } from 'clsx';
+import DNRConfirmDialog from './DNRConfirmDialog';
 
 interface Lead {
   id: string;
@@ -122,6 +123,7 @@ export default function StaffDashboard() {
   const [updating, setUpdating] = useState<string | null>(null);
   const [rescheduleModal, setRescheduleModal] = useState<Appointment | null>(null);
   const [rescheduleData, setRescheduleData] = useState({ scheduledAt: '', reason: '' });
+  const [dnrConfirm, setDnrConfirm] = useState<{ appointmentId: string; patientName: string } | null>(null);
 
   // Calendar state
   const [currentMonth, setCurrentMonth] = useState(new Date());
@@ -213,10 +215,30 @@ export default function StaffDashboard() {
     setSelectedDate(new Date());
   };
 
-  const handleStatusUpdate = async (appointmentId: string, newStatus: AppointmentStatus) => {
+  const handleStatusUpdate = async (appointmentId: string, newStatus: AppointmentStatus, patientName?: string) => {
+    // DNR requires confirmation dialog (Story 3)
+    if (newStatus === 'DNR') {
+      setDnrConfirm({ appointmentId, patientName: patientName || 'this patient' });
+      return;
+    }
+
     setUpdating(appointmentId);
     try {
       await api.patch(`/appointments/${appointmentId}`, { status: newStatus });
+      await fetchAppointments();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to update status');
+    } finally {
+      setUpdating(null);
+    }
+  };
+
+  const handleDNRConfirm = async () => {
+    if (!dnrConfirm) return;
+    setDnrConfirm(null);
+    setUpdating(dnrConfirm.appointmentId);
+    try {
+      await api.patch(`/appointments/${dnrConfirm.appointmentId}`, { status: 'DNR' });
       await fetchAppointments();
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Failed to update status');
@@ -709,7 +731,7 @@ export default function StaffDashboard() {
                                     key={status}
                                     onClick={(e) => {
                                       e.stopPropagation();
-                                      handleStatusUpdate(apt.id, status);
+                                      handleStatusUpdate(apt.id, status, apt.lead.name);
                                     }}
                                     disabled={isUpdating || apt.status === status}
                                     className={clsx(
@@ -827,6 +849,15 @@ export default function StaffDashboard() {
             </div>
           )}
         </div>
+      )}
+
+      {/* DNR Confirmation Dialog (Story 3) */}
+      {dnrConfirm && (
+        <DNRConfirmDialog
+          patientName={dnrConfirm.patientName}
+          onConfirm={handleDNRConfirm}
+          onCancel={() => setDnrConfirm(null)}
+        />
       )}
 
       {/* Reschedule Modal */}

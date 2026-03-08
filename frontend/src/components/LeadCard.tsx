@@ -24,6 +24,7 @@ import { clsx } from 'clsx';
 import { format, parseISO, isToday, isPast } from 'date-fns';
 import { formatDateIST, formatDateTimeIST, formatDateInputIST } from '../utils/formatDate';
 import NoteThread from './NoteThread';
+import DNRConfirmDialog from './DNRConfirmDialog';
 
 // Status badge colors
 const statusColors: Record<LeadStatus, string> = {
@@ -158,7 +159,8 @@ export default function LeadCard({ lead, index, onSelect: _onSelect }: LeadCardP
   const [pendingStatusChange, setPendingStatusChange] = useState<LeadStatus | null>(null);
   const [followUpDateForModal, setFollowUpDateForModal] = useState('');
   const [followUpError, setFollowUpError] = useState<string | null>(null);
-  
+  const [showDNRConfirm, setShowDNRConfirm] = useState(false);
+
   const { updateLead, assignLead, deleteLead, fetchLeads } = useLeadStore();
   const { user } = useAuthStore();
   const isAdmin = user?.role ? isAdminRole(user.role) : false;
@@ -416,6 +418,12 @@ export default function LeadCard({ lead, index, onSelect: _onSelect }: LeadCardP
 
   // Handle status change with mandatory follow-up check (User Story L2)
   const handleStatusChange = async (status: LeadStatus) => {
+    // DNR requires confirmation dialog (Story 3)
+    if (status === 'DNR') {
+      setShowDNRConfirm(true);
+      return;
+    }
+
     // Check if this status requires follow-up (User Story L2, L3)
     if (STATUSES_REQUIRING_FOLLOWUP.includes(status) && status !== 'ATTEMPTING') {
       // Show modal to collect follow-up date
@@ -429,6 +437,17 @@ export default function LeadCard({ lead, index, onSelect: _onSelect }: LeadCardP
     // For ATTEMPTING and other statuses that don't require follow-up
     try {
       await updateLead(lead.id, { status });
+      await fetchLeads();
+    } catch (err) {
+      setEditError(err instanceof Error ? err.message : 'Failed to update status');
+    }
+  };
+
+  // DNR confirmed (Story 3)
+  const handleDNRConfirm = async () => {
+    setShowDNRConfirm(false);
+    try {
+      await updateLead(lead.id, { status: 'DNR' as LeadStatus });
       await fetchLeads();
     } catch (err) {
       setEditError(err instanceof Error ? err.message : 'Failed to update status');
@@ -1381,6 +1400,15 @@ export default function LeadCard({ lead, index, onSelect: _onSelect }: LeadCardP
             <NoteThread leadId={lead.id} notes={lead.notes || []} />
           </div>
         </div>
+      )}
+
+      {/* DNR Confirmation Dialog (Story 3) */}
+      {showDNRConfirm && (
+        <DNRConfirmDialog
+          patientName={lead.name}
+          onConfirm={handleDNRConfirm}
+          onCancel={() => setShowDNRConfirm(false)}
+        />
       )}
 
       {/* Mandatory Follow-up Modal (User Story L2) */}
