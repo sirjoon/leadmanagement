@@ -61,8 +61,8 @@ const statusFilterOptions = [
   { value: 'SCHEDULED', label: 'Scheduled' },
   { value: 'CONFIRMED', label: 'Confirmed' },
   { value: 'RESCHEDULED', label: 'Rescheduled' },
-  { value: 'COMPLETED', label: 'Completed' },
-  { value: 'NO_SHOW', label: 'No Show' },
+  { value: 'COMPLETED', label: 'Visited' },
+  { value: 'NO_SHOW', label: 'Lost' },
   { value: 'DNR', label: 'DNR' },
   { value: 'TWC', label: 'TWC' },
   { value: 'CANCELLED', label: 'Cancelled' },
@@ -317,10 +317,10 @@ function AppointmentsCalendar() {
                           <MapPin className="h-3.5 w-3.5" />
                           {apt.clinic.name}
                         </span>
-                        <span className="flex items-center gap-1">
-                          <Phone className="h-3.5 w-3.5" />
+                        <a href={`tel:${apt.lead.phone}`} className="flex items-center gap-1 text-base font-semibold text-dental-600 hover:underline">
+                          <Phone className="h-4 w-4" />
                           {apt.lead.phone}
-                        </span>
+                        </a>
                       </div>
                       {apt.status === 'RESCHEDULED' && reason && (
                         <p className="mt-1 flex items-center gap-1 text-xs text-amber-600 italic">

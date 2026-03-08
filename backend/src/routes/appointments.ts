@@ -2,7 +2,7 @@ import { Router, Response } from 'express';
 import { z } from 'zod';
 import { AuthenticatedRequest, requireRole, isAdminUser, isClinicStaff } from '../middleware/tenant.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
-import { AppointmentStatus } from '@prisma/client';
+import { AppointmentStatus, LeadStatus } from '@prisma/client';
 
 const router = Router();
 
@@ -662,6 +662,36 @@ router.patch('/:id', asyncHandler(async (req: AuthenticatedRequest, res: Respons
     where: { id: existingAppointment.lead.id },
     data: { lastContactedAt: new Date() },
   });
+
+  // Sync lead status when appointment status changes (Story 2)
+  if (data.status) {
+    const leadStatusMap: Record<string, LeadStatus> = {
+      COMPLETED: 'VISITED',
+      NO_SHOW: 'LOST',
+    };
+    const newLeadStatus = leadStatusMap[data.status];
+    if (newLeadStatus) {
+      const currentLead = await req.db.lead.findUnique({
+        where: { id: existingAppointment.lead.id },
+        select: { status: true },
+      });
+      if (currentLead) {
+        await req.db.lead.update({
+          where: { id: existingAppointment.lead.id },
+          data: { status: newLeadStatus },
+        });
+        await req.db.leadStatusHistory.create({
+          data: {
+            leadId: existingAppointment.lead.id,
+            fromStatus: currentLead.status,
+            toStatus: newLeadStatus,
+            changedBy: req.tenant.userId,
+            reason: `Appointment marked as ${data.status === 'NO_SHOW' ? 'Lost' : 'Visited'}`,
+          },
+        });
+      }
+    }
+  }
 
   res.json({
     appointment,

@@ -95,9 +95,9 @@ type AppointmentStatus = 'SCHEDULED' | 'CONFIRMED' | 'COMPLETED' | 'CANCELLED' |
 const statusConfig: Record<AppointmentStatus, { label: string; color: string; bgColor: string; icon: React.ElementType }> = {
   SCHEDULED: { label: 'Scheduled', color: 'text-blue-700', bgColor: 'bg-blue-100', icon: Clock },
   CONFIRMED: { label: 'Confirmed', color: 'text-green-700', bgColor: 'bg-green-100', icon: CheckCircle2 },
-  COMPLETED: { label: 'Completed', color: 'text-emerald-700', bgColor: 'bg-emerald-100', icon: CheckCircle2 },
+  COMPLETED: { label: 'Visited', color: 'text-emerald-700', bgColor: 'bg-emerald-100', icon: CheckCircle2 },
   CANCELLED: { label: 'Cancelled', color: 'text-slate-700', bgColor: 'bg-slate-100', icon: XCircle },
-  NO_SHOW: { label: 'No Show', color: 'text-red-700', bgColor: 'bg-red-100', icon: XCircle },
+  NO_SHOW: { label: 'Lost', color: 'text-red-700', bgColor: 'bg-red-100', icon: XCircle },
   RESCHEDULED: { label: 'Rescheduled', color: 'text-amber-700', bgColor: 'bg-amber-100', icon: RefreshCw },
   DNR: { label: 'DNR', color: 'text-orange-700', bgColor: 'bg-orange-100', icon: PhoneOff },
   TWC: { label: 'TWC', color: 'text-purple-700', bgColor: 'bg-purple-100', icon: PhoneCall },
@@ -501,8 +501,8 @@ export default function StaffDashboard() {
               <StatCard label="Total" value={stats.total} color="bg-slate-100 text-slate-700" />
               <StatCard label="Scheduled" value={stats.scheduled} color="bg-blue-100 text-blue-700" />
               <StatCard label="Confirmed" value={stats.confirmed} color="bg-green-100 text-green-700" />
-              <StatCard label="Completed" value={stats.completed} color="bg-emerald-100 text-emerald-700" />
-              <StatCard label="No Show" value={stats.noShow} color="bg-red-100 text-red-700" />
+              <StatCard label="Visited" value={stats.completed} color="bg-emerald-100 text-emerald-700" />
+              <StatCard label="Lost" value={stats.noShow} color="bg-red-100 text-red-700" />
               <StatCard label="DNR" value={stats.dnr} color="bg-orange-100 text-orange-700" />
               <StatCard label="TWC" value={stats.twc} color="bg-purple-100 text-purple-700" />
               <StatCard label="Rescheduled" value={stats.rescheduled} color="bg-amber-100 text-amber-700" />
@@ -570,10 +570,10 @@ export default function StaffDashboard() {
                           )}
                         </div>
                         <div className="mt-1 flex items-center gap-3 text-sm text-slate-500">
-                          <span className="flex items-center gap-1">
-                            <Phone className="h-3.5 w-3.5" />
+                          <a href={`tel:${apt.lead.phone}`} className="flex items-center gap-1 text-base font-semibold text-dental-600 hover:underline">
+                            <Phone className="h-4 w-4" />
                             {apt.lead.phone}
-                          </span>
+                          </a>
                           {apt.lead.treatmentInterest && (
                             <span className="flex items-center gap-1">
                               <Stethoscope className="h-3.5 w-3.5" />
@@ -606,7 +606,7 @@ export default function StaffDashboard() {
                             <div className="mt-2 space-y-1.5 text-sm">
                               <p className="flex items-center gap-2 text-slate-700">
                                 <Phone className="h-4 w-4 text-slate-400" />
-                                <a href={`tel:${apt.lead.phone}`} className="text-dental-600 hover:underline">
+                                <a href={`tel:${apt.lead.phone}`} className="text-base font-semibold text-dental-600 hover:underline">
                                   {apt.lead.phone}
                                 </a>
                               </p>
@@ -786,10 +786,10 @@ export default function StaffDashboard() {
                         )}
                       </div>
                       <div className="mt-1 flex items-center gap-3 text-sm text-slate-500">
-                        <span className="flex items-center gap-1">
-                          <Phone className="h-3.5 w-3.5" />
+                        <a href={`tel:${apt.lead.phone}`} className="flex items-center gap-1 text-base font-semibold text-dental-600 hover:underline">
+                          <Phone className="h-4 w-4" />
                           {apt.lead.phone}
-                        </span>
+                        </a>
                         {apt.lead.treatmentInterest && (
                           <span className="flex items-center gap-1">
                             <Stethoscope className="h-3.5 w-3.5" />
@@ -899,12 +899,10 @@ export default function StaffDashboard() {
                     {patientDrawer.patient.name}
                   </h2>
                   <div className="mt-1 flex items-center gap-3 text-sm text-slate-500">
-                    <span className="flex items-center gap-1">
-                      <Phone className="h-3.5 w-3.5" />
-                      <a href={`tel:${patientDrawer.patient.phone}`} className="text-dental-600 hover:underline">
-                        {patientDrawer.patient.phone}
-                      </a>
-                    </span>
+                    <a href={`tel:${patientDrawer.patient.phone}`} className="flex items-center gap-1 text-base font-semibold text-dental-600 hover:underline">
+                      <Phone className="h-4 w-4" />
+                      {patientDrawer.patient.phone}
+                    </a>
                     {patientDrawer.patient.age && (
                       <span>{patientDrawer.patient.age} yrs</span>
                     )}

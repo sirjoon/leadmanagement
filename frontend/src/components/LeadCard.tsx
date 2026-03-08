@@ -67,13 +67,13 @@ const STATUSES_REQUIRING_FOLLOWUP: LeadStatus[] = [
 
 // All statuses for admin, limited for lead users
 const adminStatuses: LeadStatus[] = [
-  'NEW', 'ATTEMPTING', 'CONNECTED', 'APPOINTMENT_BOOKED', 'VISITED',
+  'NEW', 'CONNECTED', 'APPOINTMENT_BOOKED', 'VISITED',
   'TREATMENT_STARTED', 'TREATMENT_DENIED', 'RESCHEDULED', 'LOST', 'DNA', 'DNC', 'DNR', 'TWC',
 ];
 
 // Lead User can use these statuses (User Story L3)
 const leadUserStatuses: LeadStatus[] = [
-  'ATTEMPTING', 'VISITED', 'TREATMENT_STARTED', 'TREATMENT_DENIED', 'RESCHEDULED', 'LOST', 'DNA', 'DNR', 'TWC',
+  'VISITED', 'TREATMENT_STARTED', 'TREATMENT_DENIED', 'RESCHEDULED', 'LOST', 'DNA', 'DNR', 'TWC',
 ];
 
 // Priority styles — only HOT, WARM, COLD
@@ -617,10 +617,10 @@ export default function LeadCard({ lead, index, onSelect: _onSelect }: LeadCardP
           </div>
 
           <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-slate-500">
-            <span className="flex items-center gap-1">
-              <Phone className="h-3.5 w-3.5" />
+            <a href={`tel:${lead.phone}`} className="flex items-center gap-1 text-base font-semibold text-dental-600 hover:underline">
+              <Phone className="h-4 w-4" />
               {lead.phone}
-            </span>
+            </a>
             {lead.clinic && (
               <span className="flex items-center gap-1">
                 <MapPin className="h-3.5 w-3.5" />
@@ -998,7 +998,7 @@ export default function LeadCard({ lead, index, onSelect: _onSelect }: LeadCardP
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 <div>
                   <p className="text-xs font-medium uppercase tracking-wide text-slate-400">Contact</p>
-                  <p className="mt-1 text-sm text-slate-900">{lead.phone}</p>
+                  <a href={`tel:${lead.phone}`} className="mt-1 block text-base font-semibold text-dental-600 hover:underline">{lead.phone}</a>
                   {lead.email && <p className="text-sm text-slate-500">{lead.email}</p>}
                   {lead.age && <p className="text-sm text-slate-500">{lead.age} years old</p>}
                   {lead.patientLocation && (
