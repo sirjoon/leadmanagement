@@ -485,7 +485,7 @@ ROLE-BASED VIEW:
 
 ---
 
-## Story 10: Lost Tab — STATUS: PENDING
+## Story 10: Lost Tab — STATUS: COMPLETED ✅
 
 **Size:** Medium | **Priority:** 10 | **Dependencies:** Stories 1-4
 
@@ -591,7 +591,7 @@ Reports tab already exists. Only change:
 | 8 | Story 7 - Treatment Denied Tab | Medium | COMPLETED ✅ |
 | 9 | Story 8 - Follow-ups Tab (cross-cutting) | Large | COMPLETED ✅ |
 | 10 | Story 9 - DNR/DNC Tab | Medium | COMPLETED ✅ |
-| 11 | Story 10 - Lost Tab | Medium | PENDING |
+| 11 | Story 10 - Lost Tab | Medium | COMPLETED ✅ |
 | 12 | Story 12 - Reports (hide from clinic) | Small | PENDING |
 
 ## Status Legend
