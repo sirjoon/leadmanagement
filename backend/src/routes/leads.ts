@@ -48,6 +48,7 @@ const updateLeadSchema = z.object({
   nextAction: z.string().optional(),
   treatmentPlan: z.string().nullable().optional(),
   treatmentNotes: z.string().nullable().optional(),
+  followUp: z.boolean().optional(),
 });
 
 const leadFiltersSchema = z.object({
@@ -207,6 +208,123 @@ router.get('/tbd', requireRole('ADMIN', 'SUPER_ADMIN'), asyncHandler(async (req:
 }));
 
 /**
+ * GET /leads/follow-ups
+ * Get all leads with followUp=true, sorted by followUpDate
+ * Cross-cutting view — shows leads from any status
+ */
+router.get('/follow-ups', asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  if (!req.tenant || !req.db) {
+    res.status(401).json({ error: 'Unauthorized' });
+    return;
+  }
+
+  const where: Record<string, unknown> = {
+    tenantId: req.tenant.id,
+    deletedAt: null,
+    followUp: true,
+  };
+
+  // Role-based access
+  if (isLeadUser(req.tenant.role)) {
+    where.assignedUserId = req.tenant.userId;
+  } else if (isClinicStaff(req.tenant.role) && req.tenant.location) {
+    const clinic = await req.db.clinic.findFirst({
+      where: { tenantId: req.tenant.id, slug: req.tenant.location },
+    });
+    if (clinic) {
+      where.clinicId = clinic.id;
+    }
+  }
+
+  const leads = await req.db.lead.findMany({
+    where,
+    include: {
+      clinic: { select: { id: true, name: true, slug: true } },
+      assignedUser: isAdminUser(req.tenant.role) ? {
+        select: { id: true, name: true, email: true },
+      } : false,
+      notes: {
+        orderBy: { createdAt: 'desc' },
+        take: 3,
+        include: {
+          author: { select: { id: true, name: true, role: true } },
+        },
+      },
+      _count: {
+        select: { notes: true, appointments: true },
+      },
+    },
+    orderBy: [
+      { followUpDate: 'asc' },
+      { updatedAt: 'desc' },
+    ],
+  });
+
+  res.json({ leads });
+}));
+
+/**
+ * PATCH /leads/:id/follow-up
+ * Toggle follow-up flag and set/clear follow-up date
+ */
+router.patch('/:id/follow-up', asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  if (!req.tenant || !req.db) {
+    res.status(401).json({ error: 'Unauthorized' });
+    return;
+  }
+
+  const { followUp, followUpDate } = z.object({
+    followUp: z.boolean(),
+    followUpDate: z.string().datetime().nullable().optional(),
+  }).parse(req.body);
+
+  const existingLead = await req.db.lead.findFirst({
+    where: {
+      id: req.params.id,
+      tenantId: req.tenant.id,
+      deletedAt: null,
+    },
+  });
+
+  if (!existingLead) {
+    res.status(404).json({ error: 'Lead not found' });
+    return;
+  }
+
+  // Role-based access check
+  if (isLeadUser(req.tenant.role) && existingLead.assignedUserId !== req.tenant.userId) {
+    res.status(403).json({ error: 'Access denied' });
+    return;
+  }
+  if (isClinicStaff(req.tenant.role) && req.tenant.location) {
+    const clinic = await req.db.clinic.findFirst({
+      where: { tenantId: req.tenant.id, slug: req.tenant.location },
+    });
+    if (clinic && existingLead.clinicId !== clinic.id) {
+      res.status(403).json({ error: 'Access denied' });
+      return;
+    }
+  }
+
+  const lead = await req.db.lead.update({
+    where: { id: req.params.id },
+    data: {
+      followUp,
+      followUpDate: followUp && followUpDate ? new Date(followUpDate) : followUp ? existingLead.followUpDate : null,
+      lastContactedAt: new Date(),
+    },
+    include: {
+      clinic: { select: { id: true, name: true, slug: true } },
+    },
+  });
+
+  res.json({
+    lead,
+    message: followUp ? 'Added to follow-ups' : 'Removed from follow-ups',
+  });
+}));
+
+/**
  * GET /leads/:id
  * Get single lead details
  * 
@@ -337,6 +455,7 @@ router.post('/', asyncHandler(async (req: AuthenticatedRequest, res: Response) =
       assignedUserId,
       enquiryDate: data.enquiryDate ? new Date(data.enquiryDate) : new Date(),
       followUpDate: data.followUpDate ? new Date(data.followUpDate) : null,
+      lastContactedAt: new Date(),
     },
     include: {
       clinic: true,
@@ -478,11 +597,9 @@ router.patch('/:id', asyncHandler(async (req: AuthenticatedRequest, res: Respons
       : data.followUpDate 
         ? new Date(data.followUpDate) 
         : undefined,
-    lastContactedAt: data.lastContactedAt 
-      ? new Date(data.lastContactedAt) 
-      : data.status && data.status !== existingLead.status
-        ? new Date() // Auto-update on status change (User Story A2)
-        : undefined,
+    lastContactedAt: data.lastContactedAt
+      ? new Date(data.lastContactedAt)
+      : new Date(), // Auto-update on every lead modification
   };
 
   const lead = await req.db.lead.update({

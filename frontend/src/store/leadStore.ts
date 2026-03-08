@@ -7,8 +7,9 @@ export type LeadStatus =
   | 'CONNECTED' 
   | 'APPOINTMENT_BOOKED' 
   | 'VISITED' 
-  | 'TREATMENT_STARTED' 
-  | 'RESCHEDULED' 
+  | 'TREATMENT_STARTED'
+  | 'TREATMENT_DENIED'
+  | 'RESCHEDULED'
   | 'LOST' 
   | 'DNA'  // Did Not Attend (User Story A3)
   | 'DNC' 
@@ -75,6 +76,7 @@ export interface Lead {
   notes: Note[];
   treatmentPlan: string | null;
   treatmentNotes: string | null;
+  followUp: boolean;
   createdAt: string;
   updatedAt: string;
   _count?: {

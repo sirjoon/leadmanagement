@@ -33,6 +33,7 @@ const statusColors: Record<LeadStatus, string> = {
   APPOINTMENT_BOOKED: 'bg-emerald-100 text-emerald-700 ring-emerald-500/20',
   VISITED: 'bg-green-100 text-green-700 ring-green-500/20',
   TREATMENT_STARTED: 'bg-teal-100 text-teal-700 ring-teal-500/20',
+  TREATMENT_DENIED: 'bg-rose-100 text-rose-700 ring-rose-500/20',
   RESCHEDULED: 'bg-orange-100 text-orange-700 ring-orange-500/20',
   LOST: 'bg-red-100 text-red-700 ring-red-500/20',
   DNA: 'bg-amber-100 text-amber-700 ring-amber-500/20',
@@ -48,6 +49,7 @@ const statusLabels: Record<LeadStatus, string> = {
   APPOINTMENT_BOOKED: 'Booked',
   VISITED: 'Visited',
   TREATMENT_STARTED: 'Treatment',
+  TREATMENT_DENIED: 'Tx Denied',
   RESCHEDULED: 'Rescheduled',
   LOST: 'Lost',
   DNA: 'DNA',
@@ -66,12 +68,12 @@ const STATUSES_REQUIRING_FOLLOWUP: LeadStatus[] = [
 // All statuses for admin, limited for lead users
 const adminStatuses: LeadStatus[] = [
   'NEW', 'ATTEMPTING', 'CONNECTED', 'APPOINTMENT_BOOKED', 'VISITED',
-  'TREATMENT_STARTED', 'RESCHEDULED', 'LOST', 'DNA', 'DNC', 'DNR', 'TWC',
+  'TREATMENT_STARTED', 'TREATMENT_DENIED', 'RESCHEDULED', 'LOST', 'DNA', 'DNC', 'DNR', 'TWC',
 ];
 
 // Lead User can use these statuses (User Story L3)
 const leadUserStatuses: LeadStatus[] = [
-  'ATTEMPTING', 'VISITED', 'TREATMENT_STARTED', 'RESCHEDULED', 'LOST', 'DNA', 'DNR', 'TWC',
+  'ATTEMPTING', 'VISITED', 'TREATMENT_STARTED', 'TREATMENT_DENIED', 'RESCHEDULED', 'LOST', 'DNA', 'DNR', 'TWC',
 ];
 
 // Priority styles — only HOT, WARM, COLD
@@ -1317,7 +1319,7 @@ export default function LeadCard({ lead, index, onSelect: _onSelect }: LeadCardP
           )}
 
           {/* Treatment Plan section — shown for VISITED / TREATMENT_STARTED leads */}
-          {!isEditing && (lead.status === 'VISITED' || lead.status === 'TREATMENT_STARTED') && (
+          {!isEditing && (lead.status === 'VISITED' || lead.status === 'TREATMENT_STARTED' || lead.status === 'TREATMENT_DENIED') && (
             <div className="border-t border-green-100 bg-green-50/30 p-4">
               <p className="mb-2 flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-green-700">
                 <Check className="h-3.5 w-3.5" />

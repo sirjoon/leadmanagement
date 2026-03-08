@@ -476,12 +476,18 @@ router.post('/', asyncHandler(async (req: AuthenticatedRequest, res: Response) =
     },
   });
 
+  // Update lead lastContactedAt on appointment creation
+  await req.db.lead.update({
+    where: { id: lead.id },
+    data: { lastContactedAt: new Date() },
+  });
+
   // Update lead status to APPOINTMENT_BOOKED if it's in an earlier stage
   const earlyStatuses = ['NEW', 'ATTEMPTING', 'CONNECTED'];
   if (earlyStatuses.includes(lead.status)) {
     await req.db.lead.update({
       where: { id: lead.id },
-      data: { 
+      data: {
         status: 'APPOINTMENT_BOOKED',
         clinicId: data.clinicId,
       },
@@ -651,10 +657,13 @@ router.patch('/:id', asyncHandler(async (req: AuthenticatedRequest, res: Respons
     },
   });
 
-  // NOTE: User Story C3 specifies rescheduling does NOT update leads
-  // So we intentionally do NOT modify lead status here
+  // Update lead's lastContactedAt on any appointment change
+  await req.db.lead.update({
+    where: { id: existingAppointment.lead.id },
+    data: { lastContactedAt: new Date() },
+  });
 
-  res.json({ 
+  res.json({
     appointment,
     message: isReschedule ? 'Appointment rescheduled successfully' : 'Appointment updated successfully',
     isRescheduled: isReschedule,
@@ -781,12 +790,13 @@ router.patch('/:id/treatment-plan', asyncHandler(async (req: AuthenticatedReques
     }
   }
 
-  // Update the lead's treatment plan
+  // Update the lead's treatment plan and lastContactedAt
   const lead = await req.db.lead.update({
     where: { id: appointment.leadId },
     data: {
       ...(treatmentPlan !== undefined && { treatmentPlan }),
       ...(treatmentNotes !== undefined && { treatmentNotes }),
+      lastContactedAt: new Date(),
     },
     select: {
       id: true,

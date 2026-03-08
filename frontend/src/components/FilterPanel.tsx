@@ -23,6 +23,7 @@ const statuses: { value: LeadStatus; label: string; icon: string }[] = [
   { value: 'RESCHEDULED', label: 'Rescheduled', icon: '🔄' },
   { value: 'VISITED', label: 'Visited', icon: '🏥' },
   { value: 'TREATMENT_STARTED', label: 'Treatment', icon: '⚕️' },
+  { value: 'TREATMENT_DENIED', label: 'Tx Denied', icon: '🚷' },
   { value: 'LOST', label: 'Lost', icon: '❌' },
   { value: 'DNC', label: 'DNC', icon: '🚫' },
   { value: 'DNR', label: 'DNR', icon: '📵' },

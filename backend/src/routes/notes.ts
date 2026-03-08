@@ -132,6 +132,12 @@ router.post('/', asyncHandler(async (req: AuthenticatedRequest, res: Response) =
     },
   });
 
+  // Update lastContactedAt on the lead
+  await req.db.lead.update({
+    where: { id: data.leadId },
+    data: { lastContactedAt: new Date() },
+  });
+
   res.status(201).json({ note });
 }));
 

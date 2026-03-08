@@ -100,6 +100,9 @@ model Lead {
   lastContactedAt DateTime?
   nextAction      String?
 
+  // Follow-up tracking (cross-cutting — appears in Follow-ups tab)
+  followUp        Boolean   @default(false)
+
   // Treatment (populated when status = VISITED)
   treatmentPlan  String?  @db.Text
   treatmentNotes String?  @db.Text
@@ -126,21 +129,23 @@ model Lead {
   @@index([tenantId, followUpDate])
   @@index([tenantId, clinicId, status])
   @@index([tenantId, assignedUserId])
+  @@index([tenantId, followUp])
 }
 
 enum LeadStatus {
   NEW
-  ATTEMPTING      // No follow-up required
+  ATTEMPTING        // No follow-up required
   CONNECTED
   APPOINTMENT_BOOKED
   VISITED
-  TREATMENT_STARTED  // Treatment status for analytics
+  TREATMENT_STARTED   // Active treatment
+  TREATMENT_DENIED    // Patient denied treatment
   RESCHEDULED
   LOST
-  DNA             // Did Not Attend
-  DNC             // Do Not Contact
-  DNR             // Do Not Return
-  TWC             // To Be Called / Will Call Back
+  DNA               // Did Not Attend
+  DNC               // Do Not Contact
+  DNR               // Do Not Return
+  TWC               // To Be Called / Will Call Back
 }
 
 enum Priority {
