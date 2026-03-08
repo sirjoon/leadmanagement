@@ -664,7 +664,8 @@ router.patch('/:id', asyncHandler(async (req: AuthenticatedRequest, res: Respons
   });
 
   // Sync lead status when appointment status changes (Story 2)
-  if (data.status) {
+  const effectiveStatus = isReschedule ? 'RESCHEDULED' : data.status;
+  if (effectiveStatus) {
     const leadStatusMap: Record<string, LeadStatus> = {
       COMPLETED: 'VISITED',
       NO_SHOW: 'LOST',
@@ -679,7 +680,7 @@ router.patch('/:id', asyncHandler(async (req: AuthenticatedRequest, res: Respons
       RESCHEDULED: 'Rescheduled',
       TWC: 'TWC (Will Call Back)',
     };
-    const newLeadStatus = leadStatusMap[data.status];
+    const newLeadStatus = leadStatusMap[effectiveStatus];
     if (newLeadStatus) {
       const currentLead = await req.db.lead.findUnique({
         where: { id: existingAppointment.lead.id },
@@ -696,7 +697,7 @@ router.patch('/:id', asyncHandler(async (req: AuthenticatedRequest, res: Respons
             fromStatus: currentLead.status,
             toStatus: newLeadStatus,
             changedBy: req.tenant.userId,
-            reason: `Appointment marked as ${statusReasonMap[data.status] || data.status}`,
+            reason: `Appointment marked as ${statusReasonMap[effectiveStatus] || effectiveStatus}`,
           },
         });
       }
