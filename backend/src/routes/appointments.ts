@@ -319,7 +319,7 @@ router.get('/', asyncHandler(async (req: AuthenticatedRequest, res: Response) =>
     appointments,
     roleInfo: {
       role: req.tenant.role,
-      canCreateAppointment: isAdminUser(req.tenant.role) || req.tenant.role === 'LEAD_USER',
+      canCreateAppointment: true, // All roles can book appointments
       canReschedule: true, // All roles can reschedule (User Story C3)
       canViewLeadDetails: !isClinicStaff(req.tenant.role),
     },
@@ -376,18 +376,22 @@ router.post('/', asyncHandler(async (req: AuthenticatedRequest, res: Response) =
     return;
   }
 
-  // Clinic staff cannot create appointments (User Story C4)
-  // They can only view and reschedule existing appointments
-  if (isClinicStaff(req.tenant.role)) {
-    res.status(403).json({ 
-      error: 'Permission denied',
-      message: 'Clinic staff cannot book new appointments. Please contact a lead manager.',
-      code: 'STAFF_CANNOT_CREATE_APPOINTMENT'
-    });
-    return;
-  }
-
   const data = createAppointmentSchema.parse(req.body);
+
+  // Clinic staff can only book appointments at their own clinic
+  if (isClinicStaff(req.tenant.role) && req.tenant.location) {
+    const staffClinic = await req.db.clinic.findFirst({
+      where: { tenantId: req.tenant.id, slug: req.tenant.location },
+    });
+    if (staffClinic && data.clinicId !== staffClinic.id) {
+      res.status(403).json({
+        error: 'Permission denied',
+        message: 'You can only book appointments at your own clinic.',
+        code: 'STAFF_WRONG_CLINIC'
+      });
+      return;
+    }
+  }
 
   // Verify lead exists
   const lead = await req.db.lead.findFirst({
