@@ -11,9 +11,9 @@ echo "=========================================="
 
 # ── Config ───────────────────────────────────────────────────
 DEPLOY_DIR="/home/ec2-user/dentacrm"
-DB_HOST="dentacrm-prod.chksq60yswvn.ap-south-1.rds.amazonaws.com"
+DB_HOST=$(aws ssm get-parameter --name /dentacrm/prod/db-host --with-decryption --region ap-south-1 --query 'Parameter.Value' --output text 2>/dev/null || echo "${DB_HOST}")
 DB_PORT="5432"
-DB_USER="dentacrm_admin"
+DB_USER=$(aws ssm get-parameter --name /dentacrm/prod/db-user --with-decryption --region ap-south-1 --query 'Parameter.Value' --output text 2>/dev/null || echo "${DB_USER}")
 DB_PASS=$(aws ssm get-parameter --name /dentacrm/prod/db-password --with-decryption --region ap-south-1 --query 'Parameter.Value' --output text)
 DEV_DB="dentacrm_dev"
 
