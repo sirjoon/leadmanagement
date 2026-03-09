@@ -20,6 +20,12 @@ const appointmentToLeadStatus: Record<string, LeadStatus> = {
 
 export async function syncLeadStatuses(db: PrismaClient): Promise<void> {
   try {
+    // Find an admin user to attribute status changes to
+    const adminUser = await db.user.findFirst({
+      where: { role: 'ADMIN' },
+      select: { id: true },
+    });
+
     // Find leads with completed/no-show/etc appointments whose lead status is still APPOINTMENT_BOOKED
     const staleLeads = await db.lead.findMany({
       where: {
@@ -55,15 +61,17 @@ export async function syncLeadStatuses(db: PrismaClient): Promise<void> {
           where: { id: lead.id },
           data: { status: newLeadStatus },
         });
-        await db.leadStatusHistory.create({
-          data: {
-            leadId: lead.id,
-            fromStatus: lead.status,
-            toStatus: newLeadStatus,
-            changedBy: 'system',
-            reason: `Startup sync: appointment was ${latestApptStatus}`,
-          },
-        });
+        if (adminUser) {
+          await db.leadStatusHistory.create({
+            data: {
+              leadId: lead.id,
+              fromStatus: lead.status,
+              toStatus: newLeadStatus,
+              changedBy: adminUser.id,
+              reason: `Startup sync: appointment was ${latestApptStatus}`,
+            },
+          });
+        }
         updated++;
       }
     }
