@@ -14,6 +14,8 @@ import { appointmentRoutes } from './routes/appointments.js';
 import { reportRoutes } from './routes/reports.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { tenantMiddleware } from './middleware/tenant.js';
+import { syncLeadStatuses } from './lib/syncLeadStatus.js';
+import { prisma } from './lib/prisma.js';
 
 dotenv.config();
 
@@ -63,9 +65,12 @@ app.use((_, res) => {
   res.status(404).json({ error: 'Not found' });
 });
 
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
   console.log(`🦷 DentraCRM API running on port ${PORT}`);
   console.log(`   Environment: ${process.env.NODE_ENV || 'development'}`);
+
+  // Sync lead statuses on startup to fix any historical mismatches
+  await syncLeadStatuses(prisma);
 });
 
 export default app;
