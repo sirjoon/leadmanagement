@@ -554,7 +554,7 @@ router.patch('/:id', asyncHandler(async (req: AuthenticatedRequest, res: Respons
       }
     }
     // Clinic staff can only change status or add treatment notes/follow-up
-    const allowedStaffFields = ['status', 'treatmentPlan', 'treatmentNotes', 'followUp', 'followUpDate', 'notes'];
+    const allowedStaffFields = ['status', 'treatmentPlan', 'treatmentNotes', 'followUp', 'followUpDate', 'lastContactedAt', 'notes'];
     const requestedFields = Object.keys(data);
     const disallowed = requestedFields.filter(f => !allowedStaffFields.includes(f));
     if (disallowed.length > 0) {

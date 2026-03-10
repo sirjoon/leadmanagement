@@ -170,7 +170,6 @@ export const STATUSES_REQUIRING_FOLLOWUP: string[] = [
   'CONNECTED',
   'APPOINTMENT_BOOKED',
   'RESCHEDULED',
-  'LOST',
   'DNA',
 ];
 
