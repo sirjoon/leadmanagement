@@ -1,4 +1,4 @@
-import { useState, FormEvent } from 'react';
+import { useState, useEffect, FormEvent } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Eye, EyeOff, AlertCircle, ArrowRight } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
@@ -20,6 +20,11 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [tenantId, setTenantId] = useState(urlTenantId || '');
   const [showPassword, setShowPassword] = useState(false);
+
+  // Clear any stale errors when login page mounts
+  useEffect(() => {
+    clearError();
+  }, [clearError]);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
