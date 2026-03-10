@@ -137,6 +137,17 @@ export default function PatientCard({ lead, index, actions, onAction, onSchedule
     }
   };
 
+  const handleMarkContacted = async () => {
+    setActionInProgress('lastContact');
+    try {
+      await updateLead(lead.id, { lastContactedAt: new Date().toISOString() } as Partial<Lead>);
+    } catch {
+      // handled by store
+    } finally {
+      setActionInProgress(null);
+    }
+  };
+
   const handleQuickCall = () => {
     window.open(`tel:${lead.phone}`, '_self');
   };
@@ -240,10 +251,19 @@ export default function PatientCard({ lead, index, actions, onAction, onSchedule
 
         {/* Right side badges */}
         <div className="flex items-center gap-3">
-          <div className="hidden sm:flex flex-col items-end gap-0.5">
+          <button
+            onClick={handleMarkContacted}
+            disabled={actionInProgress === 'lastContact'}
+            className="hidden sm:flex flex-col items-end gap-0.5 rounded-lg px-2 py-1 transition-colors hover:bg-green-50"
+            title="Click to mark as contacted now"
+          >
             <span className="text-[10px] uppercase tracking-wide text-slate-400">Last Contact</span>
-            {getLastContactBadge()}
-          </div>
+            {actionInProgress === 'lastContact' ? (
+              <Loader2 className="h-3.5 w-3.5 spinner text-slate-400" />
+            ) : (
+              getLastContactBadge()
+            )}
+          </button>
 
           {getFollowUpBadge()}
 
