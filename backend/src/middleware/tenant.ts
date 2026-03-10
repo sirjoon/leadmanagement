@@ -169,8 +169,6 @@ export const requireClinicAccess = (
 export const STATUSES_REQUIRING_FOLLOWUP: string[] = [
   'CONNECTED',
   'APPOINTMENT_BOOKED',
-  'VISITED',
-  'TREATMENT_STARTED',
   'RESCHEDULED',
   'LOST',
   'DNA',
