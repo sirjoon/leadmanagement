@@ -166,7 +166,7 @@ export default function LeadCard({ lead, index, onSelect: _onSelect }: LeadCardP
   const [followUpError, setFollowUpError] = useState<string | null>(null);
   const [showDNRConfirm, setShowDNRConfirm] = useState(false);
 
-  const { updateLead, assignLead, deleteLead, fetchLeads } = useLeadStore();
+  const { updateLead, deleteLead, fetchLeads } = useLeadStore();
   const { user } = useAuthStore();
   const isAdmin = user?.role ? isAdminRole(user.role) : false;
   const isLeadUser = user?.role ? isLeadUserRole(user.role) : false;
@@ -427,16 +427,11 @@ export default function LeadCard({ lead, index, onSelect: _onSelect }: LeadCardP
           : null;
       }
 
-      // Handle clinic assignment separately
+      // Clinic assignment: include in PATCH so both Admin and Lead User can change it
       if (editData.clinicId !== (lead.clinicId || '')) {
-        if (editData.clinicId) {
-          await assignLead(lead.id, editData.clinicId);
-        } else {
-          updatePayload.clinicId = null;
-        }
+        updatePayload.clinicId = editData.clinicId || null;
       }
 
-      // Only call updateLead if there are changes beyond clinicId
       if (Object.keys(updatePayload).length > 0) {
         await updateLead(lead.id, updatePayload as Partial<Lead>);
       }
@@ -540,11 +535,7 @@ export default function LeadCard({ lead, index, onSelect: _onSelect }: LeadCardP
 
   const handleClinicAssign = async (clinicId: string) => {
     try {
-      if (clinicId) {
-        await assignLead(lead.id, clinicId);
-      } else {
-        await updateLead(lead.id, { clinicId: null } as Partial<Lead>);
-      }
+      await updateLead(lead.id, { clinicId: clinicId || null } as Partial<Lead>);
       await fetchLeads();
     } catch {
       // Error handled by store
@@ -1168,8 +1159,8 @@ export default function LeadCard({ lead, index, onSelect: _onSelect }: LeadCardP
           {!isEditing && (
             <div className="border-t border-slate-100 p-4">
               <div className="flex flex-wrap items-center gap-3">
-                {/* Clinic assignment — Admin only */}
-                {isAdmin && (
+                {/* Clinic assignment — Admin and Lead User */}
+                {(isAdmin || isLeadUser) && (
                   <>
                     <p className="text-xs font-medium uppercase tracking-wide text-slate-400">Clinic</p>
                     <select
@@ -1185,8 +1176,8 @@ export default function LeadCard({ lead, index, onSelect: _onSelect }: LeadCardP
                   </>
                 )}
 
-                {/* Clinic display — Staff only (read-only) */}
-                {!isAdmin && lead.clinic && (
+                {/* Clinic display — Clinic staff only (read-only) */}
+                {!isAdmin && !isLeadUser && lead.clinic && (
                   <>
                     <p className="text-xs font-medium uppercase tracking-wide text-slate-400">Clinic</p>
                     <span className="flex items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm text-slate-700">

@@ -578,15 +578,7 @@ router.patch('/:id', asyncHandler(async (req: AuthenticatedRequest, res: Respons
       return;
     }
 
-    // Lead users cannot reassign leads (User Story L1)
-    if (data.clinicId !== undefined) {
-      res.status(403).json({
-        error: 'Permission denied',
-        message: 'Only administrators can reassign leads to different clinics.',
-        code: 'REASSIGN_NOT_ALLOWED'
-      });
-      return;
-    }
+    // Lead users can assign their leads to a clinic (same as other lead fields they can edit)
 
     // Lead users cannot change to DNC status (admin-only decision)
     if (data.status === 'DNC') {
