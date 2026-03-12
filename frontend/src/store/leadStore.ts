@@ -204,19 +204,18 @@ export const useLeadStore = create<LeadState>((set, get) => ({
     const response = await api.patch(`/leads/${id}`, data);
     const updatedLead = response.data.lead;
 
+    const mergeLead = (l: Lead) => ({
+      ...l,
+      ...updatedLead,
+      notes: updatedLead.notes ?? l.notes,
+      _count: updatedLead._count ?? l._count,
+    });
+
     set((state) => ({
-      leads: state.leads.map((l) => {
-        if (l.id !== id) return l;
-        // Merge: keep existing notes/_count if not in response
-        return {
-          ...l,
-          ...updatedLead,
-          notes: updatedLead.notes ?? l.notes,
-          _count: updatedLead._count ?? l._count,
-        };
-      }),
+      leads: state.leads.map((l) => (l.id !== id ? l : mergeLead(l))),
+      tbdLeads: state.tbdLeads.map((l) => (l.id !== id ? l : mergeLead(l))),
       currentLead: state.currentLead?.id === id
-        ? { ...state.currentLead, ...updatedLead, notes: updatedLead.notes ?? state.currentLead.notes, _count: updatedLead._count ?? state.currentLead._count }
+        ? mergeLead(state.currentLead)
         : state.currentLead,
     }));
 
