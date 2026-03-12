@@ -1,6 +1,7 @@
-import { useState } from 'react';
-import { X, Calendar, Clock, Loader2 } from 'lucide-react';
-import { type Lead, type LeadStatus, useLeadStore } from '../store/leadStore';
+import { useState, useEffect } from 'react';
+import { X, Calendar, Clock, Loader2, Building2 } from 'lucide-react';
+import { type Lead, type LeadStatus, type Clinic, useLeadStore } from '../store/leadStore';
+import { useAuthStore, isAdminRole } from '../store/authStore';
 import { api } from '../api/client';
 
 interface ScheduleAppointmentModalProps {
@@ -23,10 +24,28 @@ export default function ScheduleAppointmentModal({
   const [scheduledAt, setScheduledAt] = useState('');
   const [duration, setDuration] = useState('30');
   const [notes, setNotes] = useState('');
+  const [clinicId, setClinicId] = useState<string>(lead.clinicId ?? '');
+  const [clinics, setClinics] = useState<Clinic[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const { user } = useAuthStore();
+  const isAdmin = user?.role ? isAdminRole(user.role) : false;
   const { updateLead } = useLeadStore();
+
+  // Sync clinicId when lead changes (e.g. when opening modal for a different lead)
+  useEffect(() => {
+    setClinicId(lead.clinicId ?? '');
+  }, [lead.id, lead.clinicId]);
+
+  // Fetch clinics for admin so they can choose which clinic to schedule at
+  useEffect(() => {
+    if (isAdmin) {
+      api.get('/clinics').then((res) => setClinics(res.data.clinics ?? [])).catch(() => {});
+    }
+  }, [isAdmin]);
+
+  const effectiveClinicId = isAdmin && clinicId ? clinicId : (lead.clinicId ?? '');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,15 +53,19 @@ export default function ScheduleAppointmentModal({
       setError('Please select a date and time');
       return;
     }
+    if (!effectiveClinicId) {
+      setError('Please select a clinic for the appointment (or assign the lead to a clinic first).');
+      return;
+    }
 
     setIsSubmitting(true);
     setError(null);
 
     try {
-      // Create appointment
+      // Create appointment at the chosen clinic (admin can pick; others use lead's clinic)
       await api.post('/appointments', {
         leadId: lead.id,
-        clinicId: lead.clinicId,
+        clinicId: effectiveClinicId,
         scheduledAt: new Date(scheduledAt).toISOString(),
         duration: parseInt(duration, 10),
         notes: notes || undefined,
@@ -88,11 +111,31 @@ export default function ScheduleAppointmentModal({
           </div>
         </div>
 
-        {lead.clinic && (
+        {/* Clinic: admin can choose which clinic to schedule at; others see lead's clinic only */}
+        {isAdmin && clinics.length > 0 ? (
+          <div className="mt-3">
+            <label className="mb-1 flex items-center gap-1 text-sm font-medium text-slate-700">
+              <Building2 className="h-4 w-4" />
+              Schedule at clinic
+            </label>
+            <select
+              value={clinicId}
+              onChange={(e) => setClinicId(e.target.value)}
+              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 focus:border-dental-500 focus:outline-none focus:ring-2 focus:ring-dental-500/20"
+              required
+            >
+              <option value="">Select clinic (e.g. RS Puram, Ganapathy)</option>
+              {clinics.map((c) => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </select>
+            <p className="mt-1 text-xs text-slate-500">Choosing the clinic here determines where the patient appears (e.g. that clinic&apos;s dashboard).</p>
+          </div>
+        ) : lead.clinic ? (
           <div className="mt-3 rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-600">
             Clinic: <strong>{lead.clinic.name}</strong>
           </div>
-        )}
+        ) : null}
 
         <form onSubmit={handleSubmit} className="mt-4 space-y-4">
           <div>

@@ -480,10 +480,13 @@ router.post('/', asyncHandler(async (req: AuthenticatedRequest, res: Response) =
     },
   });
 
-  // Update lead lastContactedAt on appointment creation
+  // Update lead: lastContactedAt and clinicId so lead appears under the clinic where appointment was booked
   await req.db.lead.update({
     where: { id: lead.id },
-    data: { lastContactedAt: new Date() },
+    data: {
+      lastContactedAt: new Date(),
+      clinicId: data.clinicId,
+    },
   });
 
   // Update lead status to APPOINTMENT_BOOKED if it's in an earlier stage
@@ -491,10 +494,7 @@ router.post('/', asyncHandler(async (req: AuthenticatedRequest, res: Response) =
   if (earlyStatuses.includes(lead.status)) {
     await req.db.lead.update({
       where: { id: lead.id },
-      data: {
-        status: 'APPOINTMENT_BOOKED',
-        clinicId: data.clinicId,
-      },
+      data: { status: 'APPOINTMENT_BOOKED' },
     });
 
     // Record status change (User Story A2 - tracking)

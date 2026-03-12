@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Phone,
   MessageSquare,
@@ -73,8 +73,17 @@ export default function PatientCard({ lead, index, actions, onAction, onSchedule
   const [treatmentPlan, setTreatmentPlan] = useState(lead.treatmentPlan || '');
   const [treatmentNotes, setTreatmentNotes] = useState(lead.treatmentNotes || '');
   const [isSavingDetails, setIsSavingDetails] = useState(false);
+  const [patientName, setPatientName] = useState(lead.name);
+  const [patientPhone, setPatientPhone] = useState(lead.phone);
+  const [isSavingPatientInfo, setIsSavingPatientInfo] = useState(false);
 
   const { updateLead } = useLeadStore();
+
+  // Sync name/phone when lead changes (e.g. after refetch)
+  useEffect(() => {
+    setPatientName(lead.name);
+    setPatientPhone(lead.phone);
+  }, [lead.id, lead.name, lead.phone]);
 
   const handleAction = (action: PatientAction) => {
     if (action.status === 'DNR') {
@@ -118,6 +127,22 @@ export default function PatientCard({ lead, index, actions, onAction, onSchedule
       // handled by store
     } finally {
       setActionInProgress(null);
+    }
+  };
+
+  const handleSavePatientInfo = async () => {
+    const nameTrimmed = patientName.trim();
+    if (!nameTrimmed || (nameTrimmed === lead.name && patientPhone === lead.phone)) return;
+    setIsSavingPatientInfo(true);
+    try {
+      await updateLead(lead.id, {
+        name: nameTrimmed,
+        phone: patientPhone.trim(),
+      } as Partial<Lead>);
+    } catch {
+      // handled by store
+    } finally {
+      setIsSavingPatientInfo(false);
     }
   };
 
@@ -357,6 +382,43 @@ export default function PatientCard({ lead, index, actions, onAction, onSchedule
       {/* Expanded section */}
       {isExpanded && (
         <div className="border-t border-slate-100 p-4 space-y-4">
+          {/* Editable patient name & phone */}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div>
+              <label className="mb-1 block text-xs font-medium text-slate-500">Patient name</label>
+              <input
+                type="text"
+                value={patientName}
+                onChange={(e) => setPatientName(e.target.value)}
+                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 focus:border-dental-500 focus:outline-none focus:ring-2 focus:ring-dental-500/20"
+                placeholder="Full name"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-slate-500">Phone</label>
+              <input
+                type="tel"
+                value={patientPhone}
+                onChange={(e) => setPatientPhone(e.target.value)}
+                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 focus:border-dental-500 focus:outline-none focus:ring-2 focus:ring-dental-500/20"
+                placeholder="Phone number"
+              />
+            </div>
+          </div>
+          {(patientName.trim() !== lead.name || patientPhone.trim() !== lead.phone) && (
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={handleSavePatientInfo}
+                disabled={isSavingPatientInfo || !patientName.trim()}
+                className="flex items-center gap-1.5 rounded-lg bg-dental-500 px-3 py-1.5 text-xs font-medium text-white hover:bg-dental-600 disabled:opacity-50"
+              >
+                {isSavingPatientInfo ? <Loader2 className="h-3.5 w-3.5 spinner" /> : null}
+                Save name &amp; phone
+              </button>
+            </div>
+          )}
+
           {/* Details grid */}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             {/* Treatment Plan */}

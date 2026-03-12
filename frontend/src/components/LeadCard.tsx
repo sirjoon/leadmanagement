@@ -152,6 +152,9 @@ export default function LeadCard({ lead, index, onSelect: _onSelect }: LeadCardP
   const [isDeleting, setIsDeleting] = useState(false);
   const [rescheduleModal, setRescheduleModal] = useState<{ id: string; scheduledAt: string } | null>(null);
   const [rescheduleData, setRescheduleData] = useState({ scheduledAt: '', reason: '' });
+  const [inlineNameEdit, setInlineNameEdit] = useState(false);
+  const [inlineNameValue, setInlineNameValue] = useState(lead.name);
+  const [isSavingName, setIsSavingName] = useState(false);
   const [isRescheduling, setIsRescheduling] = useState(false);
   
   // Mandatory follow-up modal state (User Story L2)
@@ -228,7 +231,36 @@ export default function LeadCard({ lead, index, onSelect: _onSelect }: LeadCardP
       clinicId: lead.clinicId || '',
       priority: lead.priority,
     });
+    setInlineNameValue(lead.name);
   }, [lead]);
+
+  const handleStartInlineNameEdit = () => {
+    setInlineNameValue(lead.name);
+    setInlineNameEdit(true);
+  };
+
+  const handleSaveInlineName = async () => {
+    const trimmed = inlineNameValue.trim();
+    if (!trimmed || trimmed === lead.name) {
+      setInlineNameEdit(false);
+      return;
+    }
+    setIsSavingName(true);
+    try {
+      await updateLead(lead.id, { name: trimmed } as Partial<Lead>);
+      await fetchLeads();
+      setInlineNameEdit(false);
+    } catch {
+      setEditError('Failed to update name');
+    } finally {
+      setIsSavingName(false);
+    }
+  };
+
+  const handleCancelInlineName = () => {
+    setInlineNameValue(lead.name);
+    setInlineNameEdit(false);
+  };
 
   // Get follow-up badge with color indicators (User Story S2)
   const getFollowUpBadge = () => {
@@ -625,8 +657,55 @@ export default function LeadCard({ lead, index, onSelect: _onSelect }: LeadCardP
 
         {/* Lead info */}
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <h3 className="truncate font-semibold text-slate-900">{lead.name}</h3>
+          <div className="flex items-center gap-2 flex-wrap">
+            {inlineNameEdit ? (
+              <div className="flex items-center gap-1.5 flex-1 min-w-0">
+                <input
+                  type="text"
+                  value={inlineNameValue}
+                  onChange={(e) => setInlineNameValue(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleSaveInlineName();
+                    if (e.key === 'Escape') handleCancelInlineName();
+                  }}
+                  className="min-w-0 max-w-[200px] rounded border border-dental-300 px-2 py-1 text-sm font-semibold text-slate-900 focus:border-dental-500 focus:outline-none focus:ring-1 focus:ring-dental-500"
+                  autoFocus
+                  disabled={isSavingName}
+                />
+                <button
+                  type="button"
+                  onClick={handleSaveInlineName}
+                  disabled={isSavingName || !inlineNameValue.trim()}
+                  className="rounded p-1 text-dental-600 hover:bg-dental-50 disabled:opacity-50"
+                  title="Save name"
+                >
+                  <Check className="h-4 w-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={handleCancelInlineName}
+                  disabled={isSavingName}
+                  className="rounded p-1 text-slate-500 hover:bg-slate-100"
+                  title="Cancel"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            ) : (
+              <>
+                <h3 className="truncate font-semibold text-slate-900">{lead.name}</h3>
+                {(isAdmin || isLeadUser) && (
+                  <button
+                    type="button"
+                    onClick={handleStartInlineNameEdit}
+                    className="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+                    title="Edit name"
+                  >
+                    <Edit2 className="h-3.5 w-3.5" />
+                  </button>
+                )}
+              </>
+            )}
             <span className={clsx(
               'inline-flex rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset',
               statusColors[lead.status]
