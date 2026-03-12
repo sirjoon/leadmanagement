@@ -16,6 +16,7 @@ import {
   Trash2,
   RefreshCw,
   Loader2,
+  XCircle,
 } from 'lucide-react';
 import { type Lead, type LeadStatus, type Priority, type LeadSource, useLeadStore } from '../store/leadStore';
 import { useAuthStore, isAdminRole, isLeadUserRole } from '../store/authStore';
@@ -152,6 +153,7 @@ export default function LeadCard({ lead, index, onSelect: _onSelect }: LeadCardP
   const [isDeleting, setIsDeleting] = useState(false);
   const [rescheduleModal, setRescheduleModal] = useState<{ id: string; scheduledAt: string } | null>(null);
   const [rescheduleData, setRescheduleData] = useState({ scheduledAt: '', reason: '' });
+  const [cancellingAptId, setCancellingAptId] = useState<string | null>(null);
   const [inlineNameEdit, setInlineNameEdit] = useState(false);
   const [inlineNameValue, setInlineNameValue] = useState(lead.name);
   const [isSavingName, setIsSavingName] = useState(false);
@@ -628,6 +630,20 @@ export default function LeadCard({ lead, index, onSelect: _onSelect }: LeadCardP
       alert(err instanceof Error ? err.message : 'Failed to reschedule');
     } finally {
       setIsRescheduling(false);
+    }
+  };
+
+  const handleCancelAppointment = async (appointmentId: string) => {
+    if (!confirm('Cancel this appointment? The slot will become available.')) return;
+    setCancellingAptId(appointmentId);
+    try {
+      await api.patch(`/appointments/${appointmentId}`, { status: 'CANCELLED' });
+      fetchLeadAppointments();
+      await fetchLeads();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to cancel appointment');
+    } finally {
+      setCancellingAptId(null);
     }
   };
 
@@ -1258,19 +1274,33 @@ export default function LeadCard({ lead, index, onSelect: _onSelect }: LeadCardP
                         {apt.status.replace('_', ' ')}
                       </span>
                       {['SCHEDULED', 'CONFIRMED', 'RESCHEDULED'].includes(apt.status) && (
-                        <button
-                          onClick={() => {
-                            setRescheduleModal({ id: apt.id, scheduledAt: apt.scheduledAt });
-                            setRescheduleData({
-                              scheduledAt: formatDateInputIST(apt.scheduledAt),
-                              reason: '',
-                            });
-                          }}
-                          className="ml-1 rounded p-1 text-slate-400 hover:bg-amber-50 hover:text-amber-600"
-                          title="Reschedule"
-                        >
-                          <RefreshCw className="h-3.5 w-3.5" />
-                        </button>
+                        <>
+                          <button
+                            onClick={() => {
+                              setRescheduleModal({ id: apt.id, scheduledAt: apt.scheduledAt });
+                              setRescheduleData({
+                                scheduledAt: formatDateInputIST(apt.scheduledAt),
+                                reason: '',
+                              });
+                            }}
+                            className="ml-1 rounded p-1 text-slate-400 hover:bg-amber-50 hover:text-amber-600"
+                            title="Reschedule"
+                          >
+                            <RefreshCw className="h-3.5 w-3.5" />
+                          </button>
+                          <button
+                            onClick={() => handleCancelAppointment(apt.id)}
+                            disabled={cancellingAptId === apt.id}
+                            className="ml-1 rounded p-1 text-slate-400 hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
+                            title="Cancel appointment"
+                          >
+                            {cancellingAptId === apt.id ? (
+                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            ) : (
+                              <XCircle className="h-3.5 w-3.5" />
+                            )}
+                          </button>
+                        </>
                       )}
                     </div>
                   ))}

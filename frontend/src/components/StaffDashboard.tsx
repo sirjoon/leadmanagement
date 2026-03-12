@@ -569,7 +569,8 @@ export default function StaffDashboard() {
                       apt.status === 'NO_SHOW' && 'border-red-300 bg-red-50/30',
                       apt.status === 'DNR' && 'border-orange-300 bg-orange-50/30',
                       apt.status === 'TWC' && 'border-purple-300 bg-purple-50/30',
-                      !['RESCHEDULED', 'COMPLETED', 'NO_SHOW', 'DNR', 'TWC'].includes(apt.status) && 'border-slate-200'
+                      apt.status === 'CANCELLED' && 'border-slate-300 bg-slate-50/50',
+                      !['RESCHEDULED', 'COMPLETED', 'NO_SHOW', 'DNR', 'TWC', 'CANCELLED'].includes(apt.status) && 'border-slate-200'
                     )}
                   >
                     {/* Main Row */}
@@ -685,17 +686,32 @@ export default function StaffDashboard() {
                           <div>
                             <p className="text-xs font-medium uppercase tracking-wide text-slate-400">Quick Actions</p>
                             <div className="mt-2 flex flex-wrap gap-2">
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  openRescheduleModal(apt);
-                                }}
-                                disabled={isUpdating}
-                                className="flex items-center gap-1 rounded-lg border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-700 hover:bg-amber-100 disabled:opacity-50"
-                              >
-                                <RefreshCw className="h-3.5 w-3.5" />
-                                Reschedule
-                              </button>
+                              {['SCHEDULED', 'CONFIRMED', 'RESCHEDULED'].includes(apt.status) && (
+                                <>
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      openRescheduleModal(apt);
+                                    }}
+                                    disabled={isUpdating}
+                                    className="flex items-center gap-1 rounded-lg border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-700 hover:bg-amber-100 disabled:opacity-50"
+                                  >
+                                    <RefreshCw className="h-3.5 w-3.5" />
+                                    Reschedule
+                                  </button>
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleStatusUpdate(apt.id, 'CANCELLED', apt.lead.name);
+                                    }}
+                                    disabled={isUpdating}
+                                    className="flex items-center gap-1 rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-100 disabled:opacity-50"
+                                  >
+                                    <XCircle className="h-3.5 w-3.5" />
+                                    Cancel
+                                  </button>
+                                </>
+                              )}
                               <a
                                 href={`tel:${apt.lead.phone}`}
                                 className="flex items-center gap-1 rounded-lg border border-blue-300 bg-blue-50 px-3 py-1.5 text-xs font-medium text-blue-700 hover:bg-blue-100"
@@ -728,7 +744,7 @@ export default function StaffDashboard() {
                             Update Status
                           </p>
                           <div className="flex flex-wrap gap-2">
-                            {(['CONFIRMED', 'COMPLETED', 'NO_SHOW', 'DNR', 'TWC'] as AppointmentStatus[]).map(
+                            {(['CONFIRMED', 'COMPLETED', 'NO_SHOW', 'DNR', 'TWC', 'CANCELLED'] as AppointmentStatus[]).map(
                               (status) => {
                                 const cfg = statusConfig[status];
                                 return (

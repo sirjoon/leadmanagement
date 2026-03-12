@@ -579,11 +579,11 @@ router.patch('/:id', asyncHandler(async (req: AuthenticatedRequest, res: Respons
       return;
     }
 
-    // Staff can set status to RESCHEDULED, CONFIRMED, NO_SHOW, COMPLETED, DNR, or TWC
-    if (data.status && !['RESCHEDULED', 'CONFIRMED', 'NO_SHOW', 'COMPLETED', 'DNR', 'TWC'].includes(data.status)) {
+    // Staff can set status to RESCHEDULED, CONFIRMED, NO_SHOW, COMPLETED, DNR, TWC, or CANCELLED
+    if (data.status && !['RESCHEDULED', 'CONFIRMED', 'NO_SHOW', 'COMPLETED', 'DNR', 'TWC', 'CANCELLED'].includes(data.status)) {
       res.status(403).json({ 
         error: 'Permission denied',
-        message: 'Clinic staff can only mark appointments as Rescheduled, Confirmed, Completed, No Show, DNR, or TWC.',
+        message: 'Clinic staff can only mark appointments as Rescheduled, Confirmed, Completed, No Show, DNR, TWC, or Cancelled.',
         code: 'INVALID_STAFF_STATUS'
       });
       return;
@@ -662,9 +662,22 @@ router.patch('/:id', asyncHandler(async (req: AuthenticatedRequest, res: Respons
   });
 
   // Update lead's lastContactedAt on any appointment change
+  const leadUpdateData: { lastContactedAt: Date; followUp?: boolean; followUpDate?: Date } = {
+    lastContactedAt: new Date(),
+  };
+
+  // When appointment is cancelled, add lead to follow-ups so they can be re-engaged
+  if (data.status === 'CANCELLED') {
+    const inThreeDays = new Date();
+    inThreeDays.setDate(inThreeDays.getDate() + 3);
+    inThreeDays.setHours(10, 0, 0, 0);
+    leadUpdateData.followUp = true;
+    leadUpdateData.followUpDate = inThreeDays;
+  }
+
   await req.db.lead.update({
     where: { id: existingAppointment.lead.id },
-    data: { lastContactedAt: new Date() },
+    data: leadUpdateData,
   });
 
   // Sync lead status when appointment status changes (Story 2)

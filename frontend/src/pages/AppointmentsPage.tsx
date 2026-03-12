@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Calendar, Clock, MapPin, Phone, ChevronLeft, ChevronRight, RefreshCw, Loader2, MessageSquare } from 'lucide-react';
+import { Calendar, Clock, MapPin, Phone, ChevronLeft, ChevronRight, RefreshCw, Loader2, MessageSquare, XCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../api/client';
 import { clsx } from 'clsx';
@@ -140,6 +140,19 @@ function AppointmentsCalendar() {
       setRescheduleData({ scheduledAt: '', reason: '' });
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Failed to reschedule');
+    } finally {
+      setUpdating(null);
+    }
+  };
+
+  const handleCancelAppointment = async (apt: Appointment) => {
+    if (!confirm(`Cancel appointment for ${apt.lead.name}? The slot will become available.`)) return;
+    setUpdating(apt.id);
+    try {
+      await api.patch(`/appointments/${apt.id}`, { status: 'CANCELLED' });
+      await fetchAppointments();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to cancel appointment');
     } finally {
       setUpdating(null);
     }
@@ -338,16 +351,36 @@ function AppointmentsCalendar() {
                     </div>
 
                     <div className="flex items-center gap-2">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          openRescheduleModal(apt);
-                        }}
-                        className="rounded-lg border border-slate-200 p-2 text-slate-500 hover:bg-slate-100 hover:text-dental-600"
-                        title="Reschedule appointment"
-                      >
-                        <RefreshCw className="h-4 w-4" />
-                      </button>
+                      {['SCHEDULED', 'CONFIRMED', 'RESCHEDULED'].includes(apt.status) && (
+                        <>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openRescheduleModal(apt);
+                            }}
+                            disabled={updating === apt.id}
+                            className="rounded-lg border border-slate-200 p-2 text-slate-500 hover:bg-slate-100 hover:text-dental-600 disabled:opacity-50"
+                            title="Reschedule appointment"
+                          >
+                            <RefreshCw className="h-4 w-4" />
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleCancelAppointment(apt);
+                            }}
+                            disabled={updating === apt.id}
+                            className="rounded-lg border border-slate-200 p-2 text-slate-500 hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
+                            title="Cancel appointment"
+                          >
+                            {updating === apt.id ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <XCircle className="h-4 w-4" />
+                            )}
+                          </button>
+                        </>
+                      )}
                       <span className={clsx(
                         'rounded-full px-3 py-1 text-xs font-medium',
                         statusColors[apt.status] || 'bg-slate-100 text-slate-700'

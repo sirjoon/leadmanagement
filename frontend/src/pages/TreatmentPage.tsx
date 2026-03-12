@@ -98,6 +98,7 @@ export default function TreatmentPage() {
   const [outcomeDialog, setOutcomeDialog] = useState<Lead | null>(null);
   const [rescheduleModal, setRescheduleModal] = useState<{ appointment: Appointment; patientName: string } | null>(null);
   const [markVisitedLoading, setMarkVisitedLoading] = useState<string | null>(null);
+  const [cancellingApptId, setCancellingApptId] = useState<string | null>(null);
 
   // Upcoming appointments
   const [appointments, setAppointments] = useState<Appointment[]>([]);
@@ -238,6 +239,19 @@ export default function TreatmentPage() {
   const handleRescheduleSuccess = () => {
     setRescheduleModal(null);
     loadAppointments();
+  };
+
+  const handleCancelAppointment = async (appt: Appointment) => {
+    if (!confirm(`Cancel appointment for ${appt.lead?.name || 'this patient'}?`)) return;
+    setCancellingApptId(appt.id);
+    try {
+      await api.patch(`/appointments/${appt.id}`, { status: 'CANCELLED' });
+      loadAppointments();
+    } catch {
+      alert('Failed to cancel appointment');
+    } finally {
+      setCancellingApptId(null);
+    }
   };
 
   const handlePageChange = (page: number) => {
@@ -475,15 +489,30 @@ export default function TreatmentPage() {
                           {getApptStatusBadge(appt.status)}
                         </td>
                         <td className="px-4 py-2.5">
-                          <button
-                            onClick={() => setRescheduleModal({
-                              appointment: appt,
-                              patientName: lead?.name || appt.lead?.name || 'Patient',
-                            })}
-                            className="rounded-lg border border-orange-200 px-2.5 py-1 text-xs font-medium text-orange-600 hover:bg-orange-50"
-                          >
-                            Reschedule
-                          </button>
+                          <div className="flex items-center gap-1.5">
+                            <button
+                              onClick={() => setRescheduleModal({
+                                appointment: appt,
+                                patientName: lead?.name || appt.lead?.name || 'Patient',
+                              })}
+                              disabled={cancellingApptId === appt.id}
+                              className="rounded-lg border border-orange-200 px-2.5 py-1 text-xs font-medium text-orange-600 hover:bg-orange-50 disabled:opacity-50"
+                            >
+                              Reschedule
+                            </button>
+                            <button
+                              onClick={() => handleCancelAppointment(appt)}
+                              disabled={cancellingApptId === appt.id}
+                              className="flex items-center gap-1 rounded-lg border border-red-200 px-2.5 py-1 text-xs font-medium text-red-600 hover:bg-red-50 disabled:opacity-50"
+                            >
+                              {cancellingApptId === appt.id ? (
+                                <Loader2 className="h-3 w-3 animate-spin" />
+                              ) : (
+                                <XCircle className="h-3 w-3" />
+                              )}
+                              Cancel
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     );
