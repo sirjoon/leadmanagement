@@ -717,9 +717,13 @@ export default function LeadCard({ lead, index, onSelect: _onSelect }: LeadCardP
             )}
             <span className={clsx(
               'inline-flex rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset',
-              statusColors[lead.status]
+              lead.status === 'APPOINTMENT_BOOKED' && lead.appointments?.[0]?.status === 'CANCELLED'
+                ? 'bg-red-100 text-red-700 ring-red-500/20'
+                : statusColors[lead.status]
             )}>
-              {statusLabels[lead.status]}
+              {lead.status === 'APPOINTMENT_BOOKED' && lead.appointments?.[0]?.status === 'CANCELLED'
+                ? 'Cancelled appointment'
+                : statusLabels[lead.status]}
             </span>
           </div>
 

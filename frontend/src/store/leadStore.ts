@@ -8,8 +8,8 @@ export type LeadStatus =
   | 'APPOINTMENT_BOOKED' 
   | 'VISITED' 
   | 'TREATMENT_STARTED'
-  | 'TREATMENT_DENIED'
-  | 'RESCHEDULED'
+  | 'TREATMENT_DENIED' 
+  | 'RESCHEDULED' 
   | 'LOST' 
   | 'DNA'  // Did Not Attend (User Story A3)
   | 'DNC' 
@@ -83,6 +83,8 @@ export interface Lead {
     notes: number;
     appointments: number;
   };
+  /** Latest appointment(s) when returned by API (for display e.g. "Cancelled appointment") */
+  appointments?: { status: string }[];
 }
 
 export interface LeadFilters {
@@ -93,6 +95,8 @@ export interface LeadFilters {
   search?: string;
   followUpFrom?: string;
   followUpTo?: string;
+  /** Filter to leads with a cancelled appointment (API: appointmentStatus=CANCELLED) */
+  appointmentStatus?: 'CANCELLED';
   page?: number;
   limit?: number;
   sortBy?: 'createdAt' | 'followUpDate' | 'updatedAt' | 'name' | 'enquiryDate';

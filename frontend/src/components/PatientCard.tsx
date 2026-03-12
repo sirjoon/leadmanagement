@@ -249,9 +249,13 @@ export default function PatientCard({ lead, index, actions, onAction, onSchedule
             <h3 className="truncate font-semibold text-slate-900">{lead.name}</h3>
             <span className={clsx(
               'inline-flex rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset',
-              statusColors[lead.status] || 'bg-slate-100 text-slate-600'
+              lead.status === 'APPOINTMENT_BOOKED' && lead.appointments?.[0]?.status === 'CANCELLED'
+                ? 'bg-red-100 text-red-700 ring-red-500/20'
+                : (statusColors[lead.status] || 'bg-slate-100 text-slate-600')
             )}>
-              {statusLabels[lead.status] || lead.status}
+              {lead.status === 'APPOINTMENT_BOOKED' && lead.appointments?.[0]?.status === 'CANCELLED'
+                ? 'Cancelled appointment'
+                : (statusLabels[lead.status] || lead.status)}
             </span>
           </div>
 

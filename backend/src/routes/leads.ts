@@ -65,6 +65,8 @@ const leadFiltersSchema = z.object({
   search: z.string().optional(),
   followUpFrom: z.string().datetime().optional(),
   followUpTo: z.string().datetime().optional(),
+  /** Filter leads whose latest/any appointment is cancelled (status remains APPOINTMENT_BOOKED) */
+  appointmentStatus: z.enum(['CANCELLED']).optional(),
   page: z.coerce.number().int().positive().default(1),
   limit: z.coerce.number().int().positive().max(100).default(20),
   sortBy: z.enum(['createdAt', 'followUpDate', 'updatedAt', 'name', 'enquiryDate']).default('updatedAt'),
@@ -149,6 +151,11 @@ router.get('/', asyncHandler(async (req: AuthenticatedRequest, res: Response) =>
       ...(filterCriteria.followUpTo && { lte: new Date(filterCriteria.followUpTo) }),
     };
   }
+  // Filter leads that have a cancelled appointment (still show as "Cancelled appointment" in UI)
+  if (filterCriteria.appointmentStatus === 'CANCELLED') {
+    where.status = 'APPOINTMENT_BOOKED';
+    where.appointments = { some: { status: 'CANCELLED' } };
+  }
 
   // Get total count
   const total = await req.db.lead.count({ where });
@@ -173,6 +180,12 @@ router.get('/', asyncHandler(async (req: AuthenticatedRequest, res: Response) =>
       },
       _count: {
         select: { notes: true, appointments: true },
+      },
+      // Latest appointment status for display (e.g. "Cancelled appointment" pill when CANCELLED)
+      appointments: {
+        orderBy: { scheduledAt: 'desc' },
+        take: 1,
+        select: { status: true },
       },
     },
     orderBy: { [sortBy]: sortOrder },

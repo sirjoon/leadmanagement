@@ -111,6 +111,27 @@ export default function FilterPanel({ onClose }: FilterPanelProps) {
           </div>
         </div>
 
+        {/* Cancelled appointment filter */}
+        <div>
+          <label className="mb-2 block text-sm font-medium text-slate-700">Appointment</label>
+          <button
+            type="button"
+            onClick={() => setLocalFilters((prev) => ({
+              ...prev,
+              appointmentStatus: prev.appointmentStatus === 'CANCELLED' ? undefined : 'CANCELLED',
+            }))}
+            className={clsx(
+              'flex items-center gap-1 rounded-full px-3 py-1 text-xs font-medium transition-colors',
+              localFilters.appointmentStatus === 'CANCELLED'
+                ? 'bg-red-100 text-red-700 ring-1 ring-red-500/20'
+                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+            )}
+          >
+            <span>🚫</span>
+            Cancelled appointment
+          </button>
+        </div>
+
         {/* Priority */}
         <div>
           <label className="mb-2 block text-sm font-medium text-slate-700">Priority</label>
