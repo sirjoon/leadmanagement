@@ -200,9 +200,18 @@ export default function LeadsPage() {
 
       {/* Error state */}
       {error && (
-        <div className="flex items-center gap-3 rounded-lg bg-red-50 p-4 text-red-600">
-          <AlertCircle className="h-5 w-5" />
-          <p>{error}</p>
+        <div className="flex flex-col gap-3 rounded-lg bg-red-50 p-4 text-red-700 sm:flex-row sm:items-center">
+          <div className="flex items-center gap-3 min-w-0">
+            <AlertCircle className="h-5 w-5 flex-shrink-0" />
+            <p className="min-w-0">{error}</p>
+          </div>
+          <button
+            onClick={() => handleRefresh()}
+            className="flex items-center gap-2 self-start rounded-lg border border-red-200 bg-white px-3 py-2 text-sm font-medium text-red-700 hover:bg-red-100 sm:self-center"
+          >
+            <RefreshCw className="h-4 w-4" />
+            Try again
+          </button>
         </div>
       )}
 

@@ -27,9 +27,13 @@ export class ApiError extends Error {
   }
 }
 
+// Prevent requests from hanging indefinitely (e.g. slow server or network)
+const REQUEST_TIMEOUT_MS = 30000; // 30 seconds
+
 export const api = axios.create({
   baseURL: `${API_BASE_URL}/api/v1`,
   withCredentials: true,
+  timeout: REQUEST_TIMEOUT_MS,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -120,16 +124,19 @@ api.interceptors.response.use(
     }
 
     if (error.request) {
+      const isTimeout = error.code === 'ECONNABORTED' || error.message?.toLowerCase().includes('timeout');
       return Promise.reject(new ApiError(
-        'Network error - please check your connection and try again.',
-        'NETWORK_ERROR',
+        isTimeout
+          ? 'Request timed out. The server is taking too long to respond. Please try again.'
+          : 'Network error - please check your connection and try again.',
+        isTimeout ? 'TIMEOUT' : 'NETWORK_ERROR',
         0
       ));
     }
 
     return Promise.reject(new ApiError(
-      'An unexpected error occurred.',
-      'UNKNOWN_ERROR',
+      error.message || 'An unexpected error occurred.',
+      error.code === 'ECONNABORTED' ? 'TIMEOUT' : 'UNKNOWN_ERROR',
       0
     ));
   }
