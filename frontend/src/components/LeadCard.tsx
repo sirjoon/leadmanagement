@@ -166,7 +166,7 @@ export default function LeadCard({ lead, index, onSelect: _onSelect }: LeadCardP
   const [followUpError, setFollowUpError] = useState<string | null>(null);
   const [showDNRConfirm, setShowDNRConfirm] = useState(false);
 
-  const { updateLead, deleteLead, fetchLeads } = useLeadStore();
+  const { updateLead, deleteLead, fetchLeads, setFilters } = useLeadStore();
   const { user } = useAuthStore();
   const isAdmin = user?.role ? isAdminRole(user.role) : false;
   const isLeadUser = user?.role ? isLeadUserRole(user.role) : false;
@@ -527,7 +527,9 @@ export default function LeadCard({ lead, index, onSelect: _onSelect }: LeadCardP
   const handlePriorityChange = async (priority: Priority) => {
     try {
       await updateLead(lead.id, { priority });
-      await fetchLeads();
+      // Refetch with this priority so the lead stays visible (avoids disappearing when previous filter excluded it)
+      setFilters({ priority, page: 1 });
+      await fetchLeads({ priority, page: 1 });
     } catch {
       // Error handled by store
     }

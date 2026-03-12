@@ -40,7 +40,7 @@ const treatments = [
 ];
 
 export default function CreateLeadModal({ onClose }: CreateLeadModalProps) {
-  const { createLead, fetchLeads } = useLeadStore();
+  const { createLead, fetchLeads, setFilters } = useLeadStore();
   const { user } = useAuthStore();
   const isAdmin = user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN';
 
@@ -93,7 +93,9 @@ export default function CreateLeadModal({ onClose }: CreateLeadModalProps) {
         nextAction: formData.nextAction || undefined,
       });
 
-      await fetchLeads();
+      // Refetch without priority/status filter so the new lead is visible (avoids "disappearing" when a filter was active)
+      setFilters({ priority: undefined, status: undefined, page: 1 });
+      await fetchLeads({ priority: undefined, status: undefined, page: 1 });
       onClose();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create lead');
