@@ -1,5 +1,5 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
-import { useAuthStore, isAdminRole, isClinicStaffRole } from './store/authStore';
+import { useAuthStore, isAdminRole, isClinicStaffRole, isLeadUserRole } from './store/authStore';
 import Layout from './components/Layout';
 import LoginPage from './pages/LoginPage';
 import LeadsPage from './pages/LeadsPage';
@@ -103,6 +103,15 @@ function NoStaffRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+/** Lead User (Telecaller) can only access Leads, Appointments, DNR/DNC, Settings. Redirect others. */
+function NoLeadUserRoute({ children }: { children: React.ReactNode }) {
+  const { user } = useAuthStore();
+  if (user?.role && isLeadUserRole(user.role)) {
+    return <Navigate to="/leads" replace />;
+  }
+  return <>{children}</>;
+}
+
 function App() {
   const { user } = useAuthStore();
   const isStaff = user ? isClinicStaffRole(user.role) : false;
@@ -141,14 +150,14 @@ function App() {
                 {/* Staff Summary - Staff landing page */}
                 <Route path="/summary" element={<StaffSummaryPage />} />
 
-                {/* Patient journey tabs - All roles */}
+                {/* Patient journey - Appointments and DNR/DNC open to Lead User; rest redirect Lead User */}
                 <Route path="/appointments" element={<AppointmentsPage />} />
-                <Route path="/visited" element={<VisitedPage />} />
-                <Route path="/treatment" element={<TreatmentPage />} />
-                <Route path="/treatment-denied" element={<TreatmentDeniedPage />} />
-                <Route path="/follow-ups" element={<FollowUpsPage />} />
+                <Route path="/visited" element={<NoLeadUserRoute><VisitedPage /></NoLeadUserRoute>} />
+                <Route path="/treatment" element={<NoLeadUserRoute><TreatmentPage /></NoLeadUserRoute>} />
+                <Route path="/treatment-denied" element={<NoLeadUserRoute><TreatmentDeniedPage /></NoLeadUserRoute>} />
+                <Route path="/follow-ups" element={<NoLeadUserRoute><FollowUpsPage /></NoLeadUserRoute>} />
                 <Route path="/dnr-dnc" element={<DnrDncPage />} />
-                <Route path="/lost" element={<LostPage />} />
+                <Route path="/lost" element={<NoLeadUserRoute><LostPage /></NoLeadUserRoute>} />
 
                 {/* Analytics - Admin only (User Story A3) */}
                 <Route path="/analytics" element={
@@ -164,10 +173,12 @@ function App() {
                   </AdminOnlyRoute>
                 } />
 
-                {/* Reports - Admin + Lead User (Story 12: hide from clinic) */}
+                {/* Reports - Admin only (Lead User/Telecaller cannot access) */}
                 <Route path="/reports" element={
                   <NoStaffRoute>
-                    <ReportsPage />
+                    <NoLeadUserRoute>
+                      <ReportsPage />
+                    </NoLeadUserRoute>
                   </NoStaffRoute>
                 } />
 

@@ -73,9 +73,9 @@ const adminStatuses: LeadStatus[] = [
   'TREATMENT_STARTED', 'TREATMENT_DENIED', 'RESCHEDULED', 'LOST', 'DNA', 'DNC', 'DNR', 'TWC',
 ];
 
-// Lead User can use these statuses (User Story L3)
+// Lead User (Telecaller) can only use: New, Connected, Booked, DNR, DNC, TWC
 const leadUserStatuses: LeadStatus[] = [
-  'VISITED', 'TREATMENT_STARTED', 'TREATMENT_DENIED', 'RESCHEDULED', 'LOST', 'DNA', 'DNR', 'TWC',
+  'NEW', 'CONNECTED', 'APPOINTMENT_BOOKED', 'DNR', 'DNC', 'TWC',
 ];
 
 // Priority styles — only HOT, WARM, COLD

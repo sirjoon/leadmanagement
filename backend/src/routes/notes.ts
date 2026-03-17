@@ -1,6 +1,6 @@
 import { Router, Response } from 'express';
 import { z } from 'zod';
-import { AuthenticatedRequest } from '../middleware/tenant.js';
+import { AuthenticatedRequest, isLeadUser } from '../middleware/tenant.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
 import { NoteType } from '@prisma/client';
 
@@ -44,6 +44,18 @@ router.get('/', asyncHandler(async (req: AuthenticatedRequest, res: Response) =>
   if (!lead) {
     res.status(404).json({ error: 'Lead not found' });
     return;
+  }
+
+  // Lead User: only access notes for leads assigned to them and not yet assigned to a clinic
+  if (isLeadUser(req.tenant.role)) {
+    if (lead.assignedUserId !== req.tenant.userId || lead.clinicId) {
+      res.status(403).json({
+        error: 'Access denied',
+        message: 'You can only access notes for your assigned leads that are not yet assigned to a clinic.',
+        code: 'LEAD_USER_NOTE_ACCESS'
+      });
+      return;
+    }
   }
 
   // Clinic staff access check
@@ -98,6 +110,18 @@ router.post('/', asyncHandler(async (req: AuthenticatedRequest, res: Response) =
   if (!lead) {
     res.status(404).json({ error: 'Lead not found' });
     return;
+  }
+
+  // Lead User: only create notes for leads assigned to them and not yet assigned to a clinic
+  if (isLeadUser(req.tenant.role)) {
+    if (lead.assignedUserId !== req.tenant.userId || lead.clinicId) {
+      res.status(403).json({
+        error: 'Access denied',
+        message: 'You can only add notes to your assigned leads that are not yet assigned to a clinic.',
+        code: 'LEAD_USER_NOTE_ACCESS'
+      });
+      return;
+    }
   }
 
   // Clinic staff access check
@@ -164,6 +188,18 @@ router.patch('/:id', asyncHandler(async (req: AuthenticatedRequest, res: Respons
     return;
   }
 
+  // Lead User: cannot edit notes on leads assigned to a clinic
+  if (isLeadUser(req.tenant.role)) {
+    if (existingNote.lead.assignedUserId !== req.tenant.userId || existingNote.lead.clinicId) {
+      res.status(403).json({
+        error: 'Access denied',
+        message: 'You cannot edit notes for leads that are assigned to a clinic.',
+        code: 'LEAD_USER_NOTE_ACCESS'
+      });
+      return;
+    }
+  }
+
   // Only the author or admin can edit notes
   if (existingNote.authorId !== req.tenant.userId && 
       req.tenant.role !== 'ADMIN' && 
@@ -209,6 +245,22 @@ router.delete('/:id', asyncHandler(async (req: AuthenticatedRequest, res: Respon
   if (!existingNote) {
     res.status(404).json({ error: 'Note not found' });
     return;
+  }
+
+  // Lead User: cannot delete notes on leads assigned to a clinic (need lead for check)
+  const leadForDelete = await req.db.lead.findUnique({
+    where: { id: existingNote.leadId },
+    select: { assignedUserId: true, clinicId: true },
+  });
+  if (leadForDelete && isLeadUser(req.tenant.role)) {
+    if (leadForDelete.assignedUserId !== req.tenant.userId || leadForDelete.clinicId) {
+      res.status(403).json({
+        error: 'Access denied',
+        message: 'You cannot delete notes for leads that are assigned to a clinic.',
+        code: 'LEAD_USER_NOTE_ACCESS'
+      });
+      return;
+    }
   }
 
   // Only the author or admin can delete notes

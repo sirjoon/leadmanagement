@@ -53,11 +53,11 @@ export const useAuthStore = create<AuthState>()(
       login: async (email, password, tenantId) => {
         set({ isLoading: true, error: null });
         try {
-          const response = await api.post('/auth/login', {
-            email,
-            password,
-            tenantId,
-          });
+          const response = await api.post(
+            '/auth/login',
+            { email, password, tenantId },
+            { headers: { 'X-Tenant-ID': tenantId } }
+          );
 
           const { token, user } = response.data;
 

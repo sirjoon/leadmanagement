@@ -105,10 +105,13 @@ export default function Layout({ children }: LayoutProps) {
   const isAdmin = user?.role ? isAdminRole(user.role) : false;
   const isStaff = user?.role ? isClinicStaffRole(user.role) : false;
 
-  // Filter nav items based on role
-  const filteredNavItems = navItems.filter(item =>
-    user?.role ? canAccessNavItem(user.role, item.access) : false
-  );
+  // Lead User (Telecaller): only Leads, Appointments, DNR/DNC, Settings
+  const LEAD_USER_NAV_PATHS = ['/leads', '/appointments', '/dnr-dnc', '/settings'];
+  const filteredNavItems = navItems.filter(item => {
+    if (!user?.role) return false;
+    if (user.role === 'LEAD_USER') return LEAD_USER_NAV_PATHS.includes(item.path);
+    return canAccessNavItem(user.role, item.access);
+  });
 
   // Group items by section
   const patientItems = filteredNavItems.filter(i => i.section === 'patient');

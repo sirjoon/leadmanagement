@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { X, Calendar, Clock, Loader2, Building2 } from 'lucide-react';
 import { type Lead, type LeadStatus, type Clinic, useLeadStore } from '../store/leadStore';
-import { useAuthStore, isAdminRole } from '../store/authStore';
+import { useAuthStore, isAdminRole, isLeadUserRole } from '../store/authStore';
 import { api } from '../api/client';
 
 interface ScheduleAppointmentModalProps {
@@ -31,6 +31,7 @@ export default function ScheduleAppointmentModal({
 
   const { user } = useAuthStore();
   const isAdmin = user?.role ? isAdminRole(user.role) : false;
+  const isLeadUser = user?.role ? isLeadUserRole(user.role) : false;
   const { updateLead } = useLeadStore();
 
   // Sync clinicId when lead changes (e.g. when opening modal for a different lead)
@@ -38,14 +39,14 @@ export default function ScheduleAppointmentModal({
     setClinicId(lead.clinicId ?? '');
   }, [lead.id, lead.clinicId]);
 
-  // Fetch clinics for admin so they can choose which clinic to schedule at
+  // Fetch clinics when admin, or when Lead User and lead has no clinic (they must pick one to schedule)
   useEffect(() => {
-    if (isAdmin) {
+    if (isAdmin || (isLeadUser && !lead.clinicId)) {
       api.get('/clinics').then((res) => setClinics(res.data.clinics ?? [])).catch(() => {});
     }
-  }, [isAdmin]);
+  }, [isAdmin, isLeadUser, lead.clinicId]);
 
-  const effectiveClinicId = isAdmin && clinicId ? clinicId : (lead.clinicId ?? '');
+  const effectiveClinicId = (isAdmin && clinicId) || (isLeadUser && !lead.clinicId && clinicId) || lead.clinicId ?? '';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -111,8 +112,8 @@ export default function ScheduleAppointmentModal({
           </div>
         </div>
 
-        {/* Clinic: admin can choose which clinic to schedule at; others see lead's clinic only */}
-        {isAdmin && clinics.length > 0 ? (
+        {/* Clinic: Admin or Lead User (when lead has no clinic) must choose clinic to schedule at */}
+        {(isAdmin || (isLeadUser && !lead.clinicId)) && clinics.length > 0 ? (
           <div className="mt-3">
             <label className="mb-1 flex items-center gap-1 text-sm font-medium text-slate-700">
               <Building2 className="h-4 w-4" />
@@ -129,7 +130,7 @@ export default function ScheduleAppointmentModal({
                 <option key={c.id} value={c.id}>{c.name}</option>
               ))}
             </select>
-            <p className="mt-1 text-xs text-slate-500">Choosing the clinic here determines where the patient appears (e.g. that clinic&apos;s dashboard).</p>
+            <p className="mt-1 text-xs text-slate-500">Choosing the clinic assigns the lead to that clinic; the lead will then move to the clinic&apos;s list.</p>
           </div>
         ) : lead.clinic ? (
           <div className="mt-3 rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-600">

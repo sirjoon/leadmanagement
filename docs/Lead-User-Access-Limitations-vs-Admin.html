@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="ProgId" content="Word.Document" />
+  <meta name="Generator" content="Microsoft Word" />
+  <title>Lead User Access Limitations vs Admin – DentraCRM</title>
+  <style>
+    body { font-family: Calibri, Arial, sans-serif; font-size: 11pt; margin: 1in; }
+    h1 { font-size: 16pt; margin-bottom: 0.25in; border-bottom: 1pt solid #333; padding-bottom: 6pt; }
+    h2 { font-size: 13pt; margin-top: 0.2in; margin-bottom: 0.1in; }
+    p { margin: 0.1in 0; }
+    table { border-collapse: collapse; width: 100%; margin: 0.15in 0; }
+    th, td { border: 1pt solid #333; padding: 6pt 8pt; text-align: left; vertical-align: top; }
+    th { background: #f0f0f0; font-weight: bold; }
+    .note { font-style: italic; color: #444; margin-top: 0.15in; }
+  </style>
+</head>
+<body>
+
+<h1>Lead User Access Limitations vs Admin</h1>
+<p><strong>DentraCRM</strong> – What access is limited for the <strong>Lead User</strong> role compared to <strong>Admin</strong>.</p>
+<p>Open this file in Microsoft Word and use <strong>File → Save As → Word Document (.docx)</strong> if you need a .docx file.</p>
+
+<h2>1. Summary</h2>
+<ul>
+  <li><strong>Lead User</strong> can only see and manage <strong>leads assigned to them</strong>. Admin can see all leads across all clinics.</li>
+  <li><strong>Lead User</strong> cannot access: Analytics, User management, TBD (unassigned) leads queue, Lead assignment/reassignment, Delete lead, Export leads, or Reports exports. These are <strong>Admin only</strong>.</li>
+  <li>Lead User can add leads, edit assigned leads (including clinic and status), schedule/cancel appointments, and add notes (but cannot create “Admin only” notes).</li>
+</ul>
+
+<h2>2. Access Limited to Lead User (Admin-Only Features)</h2>
+<p>The following are <strong>only available to Admin</strong> (and Super Admin). Lead Users do <strong>not</strong> have access.</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Area</th>
+      <th>What is restricted (Admin only)</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Leads – Visibility</strong></td>
+      <td>Lead User sees only <strong>leads assigned to them</strong>. Admin sees all leads across all clinics.</td>
+    </tr>
+    <tr>
+      <td><strong>Leads – Unassigned (TBD) queue</strong></td>
+      <td>The “Unassigned Leads (TBD)” section on the Leads page is <strong>Admin only</strong>. Lead User does not see it.</td>
+    </tr>
+    <tr>
+      <td><strong>Leads – Assign / Reassign</strong></td>
+      <td>Dedicated “Assign lead to user” / reassign flow is <strong>Admin only</strong>. Lead User can change clinic for their assigned leads via edit form or clinic dropdown, but cannot assign or reassign the lead to another user.</td>
+    </tr>
+    <tr>
+      <td><strong>Leads – Delete</strong></td>
+      <td><strong>Delete lead</strong> is Admin only. Lead User cannot delete leads.</td>
+    </tr>
+    <tr>
+      <td><strong>Leads – Export</strong></td>
+      <td><strong>Export leads</strong> (e.g. CSV/Excel) is Admin only.</td>
+    </tr>
+    <tr>
+      <td><strong>Leads – Status history</strong></td>
+      <td>Viewing <strong>lead status history</strong> (who changed status and when) is Admin only. Lead User cannot see this.</td>
+    </tr>
+    <tr>
+      <td><strong>Leads – Assigned user in list</strong></td>
+      <td>“Assigned user” column/details in lead list and APIs are returned only for Admin. Lead User does not receive assigned-user data in list responses.</td>
+    </tr>
+    <tr>
+      <td><strong>Leads – Filter by clinic</strong></td>
+      <td>Filtering leads by <strong>clinic</strong> in the Filters panel is Admin only. Lead User does not see the clinic filter.</td>
+    </tr>
+    <tr>
+      <td><strong>Analytics</strong></td>
+      <td>Entire <strong>Analytics</strong> section (dashboard, funnel, by clinic, by source) is Admin only. Lead User does not see the Analytics menu or pages.</td>
+    </tr>
+    <tr>
+      <td><strong>Users</strong></td>
+      <td>Entire <strong>Users</strong> section (list, create, edit, delete users, invite) is Admin only. Lead User does not see the Users menu or pages.</td>
+    </tr>
+    <tr>
+      <td><strong>Reports – Exports</strong></td>
+      <td>Report <strong>exports</strong> (e.g. DNC/DNR export, clinic export, full export) are Admin only. Lead User can view reports in the app but cannot run export endpoints.</td>
+    </tr>
+    <tr>
+      <td><strong>Schedule appointment – clinic picker</strong></td>
+      <td>When scheduling an appointment, <strong>choosing “Schedule at clinic”</strong> (a different clinic than the lead’s current one) is Admin only. Lead User schedules at the lead’s current clinic only.</td>
+    </tr>
+    <tr>
+      <td><strong>Notes – “Admin only” notes</strong></td>
+      <td>Only Admin can create notes marked <strong>“Admin only”</strong> (hidden from clinic staff). Lead User can add notes but cannot mark them as Admin only.</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2>3. What Lead User Can Do (Shared with Admin)</h2>
+<p>Lead User has the following access (same or similar to Admin, but only for <strong>assigned leads</strong> where applicable).</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Area</th>
+      <th>Lead User access</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Leads – List & detail</strong></td>
+      <td>View leads list and lead detail (only leads assigned to them).</td>
+    </tr>
+    <tr>
+      <td><strong>Leads – Add</strong></td>
+      <td>Create new leads (Add Lead). New leads can be auto-assigned to the creating Lead User or first Lead User depending on tenant setup.</td>
+    </tr>
+    <tr>
+      <td><strong>Leads – Edit</strong></td>
+      <td>Edit assigned leads: name, phone, email, clinic, status, priority, follow-up, next action, etc. Cannot edit leads not assigned to them.</td>
+    </tr>
+    <tr>
+      <td><strong>Leads – Clinic</strong></td>
+      <td>Change clinic for <strong>assigned</strong> leads (via edit form or clinic dropdown). Cannot assign lead to another user.</td>
+    </tr>
+    <tr>
+      <td><strong>Leads – Status & priority</strong></td>
+      <td>Update status and priority for assigned leads (within allowed statuses for Lead User: e.g. Visited, Treatment, Tx Denied, Rescheduled, Lost, DNA, DNR, TWC).</td>
+    </tr>
+    <tr>
+      <td><strong>Appointments</strong></td>
+      <td>View and manage appointments for their assigned leads: schedule, reschedule, cancel. Cannot choose “Schedule at clinic” for a different clinic (Admin only).</td>
+    </tr>
+    <tr>
+      <td><strong>Notes</strong></td>
+      <td>Add and view notes on assigned leads. Cannot create “Admin only” notes.</td>
+    </tr>
+    <tr>
+      <td><strong>Reports – View</strong></td>
+      <td>View Reports pages (DNC/DNR, clinic, full). Cannot run export endpoints.</td>
+    </tr>
+    <tr>
+      <td><strong>Patient journey tabs</strong></td>
+      <td>Access Appointments, Visited, Treatment, Tx Denied, Follow-ups, DNR/DNC, Lost (for their assigned leads / relevant data).</td>
+    </tr>
+    <tr>
+      <td><strong>Settings</strong></td>
+      <td>Access Settings (all roles).</td>
+    </tr>
+  </tbody>
+</table>
+
+<p class="note">Note: “Assigned leads” means leads whose <strong>Assigned User</strong> is the current Lead User. Assignment is set by Admin (or by system when a Lead User creates a lead, depending on tenant configuration).</p>
+
+<p style="margin-top: 0.25in;"><em>Document generated from DentraCRM codebase. Roles: Admin/Super Admin, Lead User, Clinic Staff.</em></p>
+
+</body>
+</html>

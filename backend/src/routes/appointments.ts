@@ -246,9 +246,14 @@ router.get('/', asyncHandler(async (req: AuthenticatedRequest, res: Response) =>
   const { clinicId, leadId, status, from, to } = appointmentFiltersSchema.parse(req.query);
 
   // Build where clause — scope to tenant via lead
-  const where: Record<string, unknown> = {
-    lead: { tenantId: req.tenant.id, deletedAt: null },
-  };
+  const leadWhere: Record<string, unknown> = { tenantId: req.tenant.id, deletedAt: null };
+  const where: Record<string, unknown> = { lead: leadWhere };
+
+  // LEAD_USER: only appointments for their assigned leads that are not yet assigned to a clinic
+  if (req.tenant.role === 'LEAD_USER') {
+    leadWhere.assignedUserId = req.tenant.userId;
+    leadWhere.clinicId = null;
+  }
 
   // Filter by leadId if provided
   if (leadId) {

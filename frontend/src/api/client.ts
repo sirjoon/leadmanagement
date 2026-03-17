@@ -96,10 +96,10 @@ api.interceptors.response.use(
         ));
       }
 
-      // Handle 404 - not found
+      // Handle 404 - not found (backend may send message in .error or .message)
       if (status === 404) {
         return Promise.reject(new ApiError(
-          data?.message || 'The requested resource was not found.',
+          data?.message || data?.error || 'The requested resource was not found.',
           data?.code || 'NOT_FOUND',
           404
         ));

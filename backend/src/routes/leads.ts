@@ -19,6 +19,11 @@ const PATIENT_JOURNEY_STATUSES: LeadStatus[] = [
   'VISITED', 'TREATMENT_STARTED', 'TREATMENT_DENIED', 'LOST', 'DNR', 'DNC', 'TWC',
 ];
 
+// Lead User (Telecaller) can only set these statuses; once lead is assigned to clinic they cannot see it
+const LEAD_USER_ALLOWED_STATUSES: LeadStatus[] = [
+  'NEW', 'CONNECTED', 'APPOINTMENT_BOOKED', 'DNR', 'DNC', 'TWC',
+];
+
 // Validation schemas
 const createLeadSchema = z.object({
   name: z.string().min(1),
@@ -110,9 +115,10 @@ router.get('/', asyncHandler(async (req: AuthenticatedRequest, res: Response) =>
     deletedAt: null,
   };
 
-  // LEAD_USER can only see assigned leads (User Story L1)
+  // LEAD_USER can only see assigned leads that are NOT yet assigned to a clinic (User Story L1 + Telecaller)
   if (isLeadUser(req.tenant.role)) {
     where.assignedUserId = req.tenant.userId;
+    where.clinicId = null;
   }
 
   // CLINIC_STAFF: scope to their clinic
@@ -408,13 +414,21 @@ router.get('/:id', asyncHandler(async (req: AuthenticatedRequest, res: Response)
     return;
   }
 
-  // LEAD_USER access check (User Story L1)
+  // LEAD_USER access check (User Story L1 + Telecaller: cannot see leads once assigned to clinic)
   if (isLeadUser(req.tenant.role)) {
     if (lead.assignedUserId !== req.tenant.userId) {
       res.status(403).json({
         error: 'Access denied',
         message: 'You can only view leads assigned to you.',
         code: 'NOT_ASSIGNED_LEAD'
+      });
+      return;
+    }
+    if (lead.clinicId) {
+      res.status(403).json({
+        error: 'Access denied',
+        message: 'This lead has been assigned to a clinic and is no longer visible to you. An admin can unassign the clinic if you need access again.',
+        code: 'LEAD_ASSIGNED_TO_CLINIC'
       });
       return;
     }
@@ -579,9 +593,8 @@ router.patch('/:id', asyncHandler(async (req: AuthenticatedRequest, res: Respons
     }
   }
 
-  // LEAD_USER access check (User Story L1)
+  // LEAD_USER access check (User Story L1 + Telecaller)
   if (isLeadUser(req.tenant.role)) {
-    // Lead users can only update their assigned leads
     if (existingLead.assignedUserId !== req.tenant.userId) {
       res.status(403).json({
         error: 'Access denied',
@@ -590,15 +603,21 @@ router.patch('/:id', asyncHandler(async (req: AuthenticatedRequest, res: Respons
       });
       return;
     }
-
-    // Lead users can assign their leads to a clinic (same as other lead fields they can edit)
-
-    // Lead users cannot change to DNC status (admin-only decision)
-    if (data.status === 'DNC') {
-      res.status(403).json({ 
+    // Once lead is assigned to a clinic, Lead User cannot update it
+    if (existingLead.clinicId) {
+      res.status(403).json({
+        error: 'Access denied',
+        message: 'This lead has been assigned to a clinic and can no longer be edited by you.',
+        code: 'LEAD_ASSIGNED_TO_CLINIC'
+      });
+      return;
+    }
+    // Lead User (Telecaller) can only set: New, Connected, Booked, DNR, DNC, TWC
+    if (data.status !== undefined && !LEAD_USER_ALLOWED_STATUSES.includes(data.status)) {
+      res.status(403).json({
         error: 'Permission denied',
-        message: 'Only administrators can set DNC status.',
-        code: 'ADMIN_STATUS_REQUIRED'
+        message: 'You can only set status to New, Connected, Booked, DNR, DNC, or TWC.',
+        code: 'LEAD_USER_STATUS_RESTRICTED'
       });
       return;
     }
