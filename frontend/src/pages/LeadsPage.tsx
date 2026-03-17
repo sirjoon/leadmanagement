@@ -40,15 +40,17 @@ export default function LeadsPage() {
   const [showFilters, setShowFilters] = useState(false);
   const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '');
 
+  // Sync filters from URL (e.g. Lead User sidebar tabs: /leads?status=NEW)
   useEffect(() => {
-    // Clear any status filter from other tabs (shared store)
     const urlSearch = searchParams.get('search');
-    if (urlSearch) {
+    const urlStatus = searchParams.get('status');
+    if (urlStatus) {
+      setFilters({ status: urlStatus, page: 1 });
+      fetchLeads({ status: urlStatus, page: 1 });
+    } else if (urlSearch) {
       setSearchQuery(urlSearch);
       setFilters({ search: urlSearch, status: undefined, page: 1 });
       fetchLeads({ search: urlSearch, status: undefined, page: 1 });
-      // Clear URL param after applying
-      setSearchParams({}, { replace: true });
     } else {
       setFilters({ status: undefined, page: 1 });
       fetchLeads({ status: undefined, page: 1 });
@@ -56,7 +58,7 @@ export default function LeadsPage() {
     if (isAdmin) {
       fetchTbdLeads();
     }
-  }, []);
+  }, [searchParams]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();

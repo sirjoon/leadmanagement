@@ -18,6 +18,9 @@ import {
   Clock,
   PhoneOff,
   UserX,
+  Inbox,
+  Phone,
+  PhoneCall,
 } from 'lucide-react';
 import { useState } from 'react';
 import { useAuthStore, isAdminRole, isClinicStaffRole, isLeadUserRole, Role } from '../store/authStore';
@@ -50,6 +53,8 @@ interface NavItem {
   icon: React.FC<{ className?: string }>;
   access: NavItemAccess;
   section?: 'main' | 'patient' | 'admin';
+  /** For Lead User status tabs: link to same path with this query string */
+  search?: string;
 }
 
 const navItems: NavItem[] = [
@@ -69,6 +74,13 @@ const navItems: NavItem[] = [
   { path: '/analytics', label: 'Analytics', icon: BarChart3, access: 'admin', section: 'admin' },
   { path: '/users', label: 'Users', icon: UserCircle, access: 'admin', section: 'admin' },
   { path: '/settings', label: 'Settings', icon: Settings, access: 'all', section: 'admin' },
+];
+
+/** Lead User only: sidebar tabs that open Leads with status filter */
+const LEAD_USER_STATUS_TABS: NavItem[] = [
+  { path: '/leads', search: '?status=NEW', label: 'New', icon: Inbox, access: 'lead_access', section: 'patient' },
+  { path: '/leads', search: '?status=CONNECTED', label: 'Connected', icon: Phone, access: 'lead_access', section: 'patient' },
+  { path: '/leads', search: '?status=TWC', label: 'TWC', icon: PhoneCall, access: 'lead_access', section: 'patient' },
 ];
 
 /**
@@ -105,13 +117,19 @@ export default function Layout({ children }: LayoutProps) {
   const isAdmin = user?.role ? isAdminRole(user.role) : false;
   const isStaff = user?.role ? isClinicStaffRole(user.role) : false;
 
-  // Lead User (Telecaller): only Leads, Appointments, DNR/DNC, Settings
+  // Lead User (Telecaller): Leads, New, Connected, TWC (status tabs), Appointments, DNR/DNC, Settings
   const LEAD_USER_NAV_PATHS = ['/leads', '/appointments', '/dnr-dnc', '/settings'];
-  const filteredNavItems = navItems.filter(item => {
-    if (!user?.role) return false;
-    if (user.role === 'LEAD_USER') return LEAD_USER_NAV_PATHS.includes(item.path);
-    return canAccessNavItem(user.role, item.access);
-  });
+  const filteredNavItems = (() => {
+    if (!user?.role) return [];
+    if (user.role === 'LEAD_USER') {
+      const leads = navItems.find(i => i.path === '/leads');
+      const appointments = navItems.find(i => i.path === '/appointments');
+      const dnrDnc = navItems.find(i => i.path === '/dnr-dnc');
+      const settings = navItems.find(i => i.path === '/settings');
+      return [leads, ...LEAD_USER_STATUS_TABS, appointments, dnrDnc, settings].filter(Boolean) as NavItem[];
+    }
+    return navItems.filter(item => canAccessNavItem(user.role!, item.access));
+  })();
 
   // Group items by section
   const patientItems = filteredNavItems.filter(i => i.section === 'patient');
@@ -120,13 +138,15 @@ export default function Layout({ children }: LayoutProps) {
 
   const renderNavLink = (item: NavItem) => {
     const Icon = item.icon;
-    const isActive = location.pathname === item.path ||
-      (item.path !== '/' && location.pathname.startsWith(item.path + '/'));
+    const to = item.search ? { pathname: item.path, search: item.search } : item.path;
+    const isActive = item.search
+      ? location.pathname === item.path && location.search === item.search
+      : (location.pathname === item.path || (item.path !== '/' && location.pathname.startsWith(item.path + '/')));
 
     return (
       <Link
-        key={item.path}
-        to={item.path}
+        key={item.path + (item.search ?? '')}
+        to={to}
         onClick={() => setSidebarOpen(false)}
         className={clsx(
           'mb-0.5 flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all',
