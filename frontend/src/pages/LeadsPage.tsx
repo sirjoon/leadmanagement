@@ -45,15 +45,17 @@ export default function LeadsPage() {
     const urlSearch = searchParams.get('search');
     const urlStatus = searchParams.get('status');
     if (urlStatus) {
-      setFilters({ status: urlStatus, page: 1 });
-      fetchLeads({ status: urlStatus, page: 1 });
+      // Status-tab navigation should ignore stale search/priority filters from shared store
+      setFilters({ search: undefined, priority: undefined, appointmentStatus: undefined, status: urlStatus, page: 1 });
+      fetchLeads({ search: undefined, priority: undefined, appointmentStatus: undefined, status: urlStatus, page: 1 });
     } else if (urlSearch) {
       setSearchQuery(urlSearch);
       setFilters({ search: urlSearch, status: undefined, page: 1 });
       fetchLeads({ search: urlSearch, status: undefined, page: 1 });
     } else {
-      setFilters({ status: undefined, page: 1 });
-      fetchLeads({ status: undefined, page: 1 });
+      // Default Leads tab should show full list (no stale search/filters)
+      setFilters({ search: undefined, status: undefined, priority: undefined, appointmentStatus: undefined, page: 1 });
+      fetchLeads({ search: undefined, status: undefined, priority: undefined, appointmentStatus: undefined, page: 1 });
     }
     if (isAdmin) {
       fetchTbdLeads();

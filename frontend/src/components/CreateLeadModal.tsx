@@ -93,9 +93,9 @@ export default function CreateLeadModal({ onClose }: CreateLeadModalProps) {
         nextAction: formData.nextAction || undefined,
       });
 
-      // Refetch without priority/status filter so the new lead is visible (avoids "disappearing" when a filter was active)
-      setFilters({ priority: undefined, status: undefined, page: 1 });
-      await fetchLeads({ priority: undefined, status: undefined, page: 1 });
+      // Refetch without stale filters so the new lead is visible immediately
+      setFilters({ search: undefined, priority: undefined, appointmentStatus: undefined, status: undefined, page: 1 });
+      await fetchLeads({ search: undefined, priority: undefined, appointmentStatus: undefined, status: undefined, page: 1 });
       onClose();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create lead');
