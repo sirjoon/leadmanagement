@@ -249,10 +249,9 @@ router.get('/', asyncHandler(async (req: AuthenticatedRequest, res: Response) =>
   const leadWhere: Record<string, unknown> = { tenantId: req.tenant.id, deletedAt: null };
   const where: Record<string, unknown> = { lead: leadWhere };
 
-  // LEAD_USER: only appointments for their assigned leads that are not yet assigned to a clinic
+  // LEAD_USER: appointments for leads assigned to them (including after clinic is set on the lead)
   if (req.tenant.role === 'LEAD_USER') {
     leadWhere.assignedUserId = req.tenant.userId;
-    leadWhere.clinicId = null;
   }
 
   // Filter by leadId if provided

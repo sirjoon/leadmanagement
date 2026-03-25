@@ -667,6 +667,26 @@ export default function LeadCard({ lead, index, onSelect: _onSelect }: LeadCardP
         {/* Lead info */}
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 flex-wrap">
+            <a
+              href={`tel:${lead.phone}`}
+              className="flex min-w-0 items-center gap-1 truncate text-base font-semibold text-dental-600 hover:underline"
+            >
+              <Phone className="h-4 w-4 flex-shrink-0" />
+              <span className="truncate">{lead.phone}</span>
+            </a>
+            <span className={clsx(
+              'inline-flex rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset',
+              lead.status === 'APPOINTMENT_BOOKED' && lead.appointments?.[0]?.status === 'CANCELLED'
+                ? 'bg-red-100 text-red-700 ring-red-500/20'
+                : statusColors[lead.status]
+            )}>
+              {lead.status === 'APPOINTMENT_BOOKED' && lead.appointments?.[0]?.status === 'CANCELLED'
+                ? 'Cancelled appointment'
+                : statusLabels[lead.status]}
+            </span>
+          </div>
+
+          <div className="mt-0.5 flex items-center gap-2 flex-wrap">
             {inlineNameEdit ? (
               <div className="flex items-center gap-1.5 flex-1 min-w-0">
                 <input
@@ -677,7 +697,7 @@ export default function LeadCard({ lead, index, onSelect: _onSelect }: LeadCardP
                     if (e.key === 'Enter') handleSaveInlineName();
                     if (e.key === 'Escape') handleCancelInlineName();
                   }}
-                  className="min-w-0 max-w-[200px] rounded border border-dental-300 px-2 py-1 text-sm font-semibold text-slate-900 focus:border-dental-500 focus:outline-none focus:ring-1 focus:ring-dental-500"
+                  className="min-w-0 max-w-[200px] rounded border border-dental-300 px-2 py-1 text-sm font-medium text-slate-900 focus:border-dental-500 focus:outline-none focus:ring-1 focus:ring-dental-500"
                   autoFocus
                   disabled={isSavingName}
                 />
@@ -702,7 +722,7 @@ export default function LeadCard({ lead, index, onSelect: _onSelect }: LeadCardP
               </div>
             ) : (
               <>
-                <h3 className="truncate font-semibold text-slate-900">{lead.name}</h3>
+                <h3 className="truncate text-sm font-medium text-slate-800">{lead.name}</h3>
                 {(isAdmin || isLeadUser) && (
                   <button
                     type="button"
@@ -715,23 +735,9 @@ export default function LeadCard({ lead, index, onSelect: _onSelect }: LeadCardP
                 )}
               </>
             )}
-            <span className={clsx(
-              'inline-flex rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset',
-              lead.status === 'APPOINTMENT_BOOKED' && lead.appointments?.[0]?.status === 'CANCELLED'
-                ? 'bg-red-100 text-red-700 ring-red-500/20'
-                : statusColors[lead.status]
-            )}>
-              {lead.status === 'APPOINTMENT_BOOKED' && lead.appointments?.[0]?.status === 'CANCELLED'
-                ? 'Cancelled appointment'
-                : statusLabels[lead.status]}
-            </span>
           </div>
 
           <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-slate-500">
-            <a href={`tel:${lead.phone}`} className="flex items-center gap-1 text-base font-semibold text-dental-600 hover:underline">
-              <Phone className="h-4 w-4" />
-              {lead.phone}
-            </a>
             {lead.clinic && (
               <span className="flex items-center gap-1">
                 <MapPin className="h-3.5 w-3.5" />
@@ -907,6 +913,19 @@ export default function LeadCard({ lead, index, onSelect: _onSelect }: LeadCardP
               </div>
 
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {/* Phone — unique per tenant */}
+                <div className="sm:col-span-2 lg:col-span-3">
+                  <label className="mb-1 block text-xs font-medium text-slate-500">Phone (primary)</label>
+                  <input
+                    type="tel"
+                    name="phone"
+                    value={editData.phone}
+                    onChange={handleEditChange}
+                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-dental-500 focus:outline-none focus:ring-2 focus:ring-dental-500/20"
+                  />
+                  <p className="mt-0.5 text-[11px] text-slate-400">Must be unique among active leads.</p>
+                </div>
+
                 {/* Name */}
                 <div>
                   <label className="mb-1 block text-xs font-medium text-slate-500">Name</label>
@@ -914,18 +933,6 @@ export default function LeadCard({ lead, index, onSelect: _onSelect }: LeadCardP
                     type="text"
                     name="name"
                     value={editData.name}
-                    onChange={handleEditChange}
-                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-dental-500 focus:outline-none focus:ring-2 focus:ring-dental-500/20"
-                  />
-                </div>
-
-                {/* Phone */}
-                <div>
-                  <label className="mb-1 block text-xs font-medium text-slate-500">Phone</label>
-                  <input
-                    type="tel"
-                    name="phone"
-                    value={editData.phone}
                     onChange={handleEditChange}
                     className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-dental-500 focus:outline-none focus:ring-2 focus:ring-dental-500/20"
                   />

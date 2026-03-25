@@ -9,7 +9,7 @@ import {
   ChevronUp,
 } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
-import { useLeadStore } from '../store/leadStore';
+import { useLeadStore, type LeadStatus } from '../store/leadStore';
 import { useAuthStore } from '../store/authStore';
 import { clsx } from 'clsx';
 import LeadCard from '../components/LeadCard';
@@ -45,9 +45,10 @@ export default function LeadsPage() {
     const urlSearch = searchParams.get('search');
     const urlStatus = searchParams.get('status');
     if (urlStatus) {
+      const status = urlStatus as LeadStatus;
       // Status-tab navigation should ignore stale search/priority filters from shared store
-      setFilters({ search: undefined, priority: undefined, appointmentStatus: undefined, status: urlStatus, page: 1 });
-      fetchLeads({ search: undefined, priority: undefined, appointmentStatus: undefined, status: urlStatus, page: 1 });
+      setFilters({ search: undefined, priority: undefined, appointmentStatus: undefined, status, page: 1 });
+      fetchLeads({ search: undefined, priority: undefined, appointmentStatus: undefined, status, page: 1 });
     } else if (urlSearch) {
       setSearchQuery(urlSearch);
       setFilters({ search: urlSearch, status: undefined, page: 1 });
@@ -60,7 +61,8 @@ export default function LeadsPage() {
     if (isAdmin) {
       fetchTbdLeads();
     }
-  }, [searchParams]);
+    // Re-run when role/hydration settles so we never use stale isAdmin with a new user
+  }, [searchParams, isAdmin, user?.id, user?.role]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();

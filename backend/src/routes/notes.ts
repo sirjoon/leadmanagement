@@ -46,12 +46,12 @@ router.get('/', asyncHandler(async (req: AuthenticatedRequest, res: Response) =>
     return;
   }
 
-  // Lead User: only access notes for leads assigned to them and not yet assigned to a clinic
+  // Lead User: read notes for any assigned lead
   if (isLeadUser(req.tenant.role)) {
-    if (lead.assignedUserId !== req.tenant.userId || lead.clinicId) {
+    if (lead.assignedUserId !== req.tenant.userId) {
       res.status(403).json({
         error: 'Access denied',
-        message: 'You can only access notes for your assigned leads that are not yet assigned to a clinic.',
+        message: 'You can only access notes for leads assigned to you.',
         code: 'LEAD_USER_NOTE_ACCESS'
       });
       return;
@@ -112,12 +112,12 @@ router.post('/', asyncHandler(async (req: AuthenticatedRequest, res: Response) =
     return;
   }
 
-  // Lead User: only create notes for leads assigned to them and not yet assigned to a clinic
+  // Lead User: create notes on any lead assigned to them (with or without clinic)
   if (isLeadUser(req.tenant.role)) {
-    if (lead.assignedUserId !== req.tenant.userId || lead.clinicId) {
+    if (lead.assignedUserId !== req.tenant.userId) {
       res.status(403).json({
         error: 'Access denied',
-        message: 'You can only add notes to your assigned leads that are not yet assigned to a clinic.',
+        message: 'You can only add notes to leads assigned to you.',
         code: 'LEAD_USER_NOTE_ACCESS'
       });
       return;
@@ -188,12 +188,12 @@ router.patch('/:id', asyncHandler(async (req: AuthenticatedRequest, res: Respons
     return;
   }
 
-  // Lead User: cannot edit notes on leads assigned to a clinic
+  // Lead User: edit notes only on leads assigned to them
   if (isLeadUser(req.tenant.role)) {
-    if (existingNote.lead.assignedUserId !== req.tenant.userId || existingNote.lead.clinicId) {
+    if (existingNote.lead.assignedUserId !== req.tenant.userId) {
       res.status(403).json({
         error: 'Access denied',
-        message: 'You cannot edit notes for leads that are assigned to a clinic.',
+        message: 'You cannot edit notes on leads that are not assigned to you.',
         code: 'LEAD_USER_NOTE_ACCESS'
       });
       return;
@@ -247,16 +247,15 @@ router.delete('/:id', asyncHandler(async (req: AuthenticatedRequest, res: Respon
     return;
   }
 
-  // Lead User: cannot delete notes on leads assigned to a clinic (need lead for check)
   const leadForDelete = await req.db.lead.findUnique({
     where: { id: existingNote.leadId },
-    select: { assignedUserId: true, clinicId: true },
+    select: { assignedUserId: true },
   });
   if (leadForDelete && isLeadUser(req.tenant.role)) {
-    if (leadForDelete.assignedUserId !== req.tenant.userId || leadForDelete.clinicId) {
+    if (leadForDelete.assignedUserId !== req.tenant.userId) {
       res.status(403).json({
         error: 'Access denied',
-        message: 'You cannot delete notes for leads that are assigned to a clinic.',
+        message: 'You cannot delete notes on leads that are not assigned to you.',
         code: 'LEAD_USER_NOTE_ACCESS'
       });
       return;

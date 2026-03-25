@@ -144,6 +144,26 @@ export default function CreateLeadModal({ onClose }: CreateLeadModalProps) {
         {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-2">
+            {/* Phone — primary identifier (unique per tenant) */}
+            <div className="sm:col-span-2">
+              <label className="mb-1.5 block text-sm font-medium text-slate-700">
+                Phone <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="tel"
+                name="phone"
+                value={formData.phone}
+                onChange={handleChange}
+                required
+                minLength={10}
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-dental-500 focus:outline-none focus:ring-2 focus:ring-dental-500/20"
+                placeholder="9876543210"
+              />
+              <p className="mt-1 text-xs text-slate-500">
+                Primary identifier — duplicate phone numbers are not allowed for active leads.
+              </p>
+            </div>
+
             {/* Name */}
             <div className="sm:col-span-2">
               <label className="mb-1.5 block text-sm font-medium text-slate-700">
@@ -157,22 +177,6 @@ export default function CreateLeadModal({ onClose }: CreateLeadModalProps) {
                 required
                 className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-dental-500 focus:outline-none focus:ring-2 focus:ring-dental-500/20"
                 placeholder="Patient name"
-              />
-            </div>
-
-            {/* Phone */}
-            <div>
-              <label className="mb-1.5 block text-sm font-medium text-slate-700">
-                Phone <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="tel"
-                name="phone"
-                value={formData.phone}
-                onChange={handleChange}
-                required
-                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-dental-500 focus:outline-none focus:ring-2 focus:ring-dental-500/20"
-                placeholder="9876543210"
               />
             </div>
 

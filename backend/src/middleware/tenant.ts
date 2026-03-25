@@ -68,7 +68,12 @@ export const tenantMiddleware = async (
     // Critical security check: header/path must match JWT claim
     // Super admins can access any tenant
     if (decoded.role !== 'SUPER_ADMIN' && tenantId && decoded.tenant_id !== tenantId) {
-      res.status(403).json({ error: 'Tenant mismatch - Access denied' });
+      res.status(403).json({
+        error: 'Tenant mismatch - Access denied',
+        message:
+          'Organization ID does not match your session. Check the Organization ID on login or clear site data and sign in again.',
+        code: 'TENANT_MISMATCH',
+      });
       return;
     }
 
@@ -115,10 +120,12 @@ export const requireRole = (...allowedRoles: Role[]) => {
     }
 
     if (!allowedRoles.includes(req.tenant.role)) {
-      res.status(403).json({ 
+      res.status(403).json({
         error: 'Forbidden - Insufficient permissions',
+        message: `This action requires ${allowedRoles.join(' or ')}. Your role is ${req.tenant.role}.`,
+        code: 'INSUFFICIENT_ROLE',
         required: allowedRoles,
-        current: req.tenant.role
+        current: req.tenant.role,
       });
       return;
     }

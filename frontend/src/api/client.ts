@@ -86,10 +86,14 @@ api.interceptors.response.use(
         ));
       }
 
-      // Handle 403 - permission denied
+      // Handle 403 - permission denied (backend often sends only `error`, not `message`)
       if (status === 403) {
+        const msg =
+          (typeof data?.message === 'string' && data.message) ||
+          (typeof data?.error === 'string' && data.error) ||
+          'You do not have permission to perform this action.';
         return Promise.reject(new ApiError(
-          data?.message || 'You do not have permission to perform this action.',
+          msg,
           data?.code || 'PERMISSION_DENIED',
           403,
           data?.field
@@ -102,6 +106,17 @@ api.interceptors.response.use(
           data?.message || data?.error || 'The requested resource was not found.',
           data?.code || 'NOT_FOUND',
           404
+        ));
+      }
+
+      // Handle 409 - conflict (e.g. duplicate phone)
+      if (status === 409) {
+        return Promise.reject(new ApiError(
+          data?.message || data?.error || 'This action conflicts with existing data.',
+          data?.code || 'CONFLICT',
+          409,
+          data?.field,
+          data?.details
         ));
       }
 

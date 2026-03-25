@@ -46,7 +46,8 @@ export default function ScheduleAppointmentModal({
     }
   }, [isAdmin, isLeadUser, lead.clinicId]);
 
-  const effectiveClinicId = (isAdmin && clinicId) || (isLeadUser && !lead.clinicId && clinicId) || lead.clinicId ?? '';
+  const effectiveClinicId =
+    ((isAdmin && clinicId) || (isLeadUser && !lead.clinicId && clinicId) || lead.clinicId) ?? '';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

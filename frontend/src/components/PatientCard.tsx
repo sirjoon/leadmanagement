@@ -245,8 +245,14 @@ export default function PatientCard({ lead, index, actions, onAction, onSchedule
 
         {/* Patient info */}
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <h3 className="truncate font-semibold text-slate-900">{lead.name}</h3>
+          <div className="flex flex-wrap items-center gap-2">
+            <a
+              href={`tel:${lead.phone}`}
+              className="flex min-w-0 items-center gap-1 truncate text-base font-semibold text-dental-600 hover:underline"
+            >
+              <Phone className="h-4 w-4 flex-shrink-0" />
+              <span className="truncate">{lead.phone}</span>
+            </a>
             <span className={clsx(
               'inline-flex rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset',
               lead.status === 'APPOINTMENT_BOOKED' && lead.appointments?.[0]?.status === 'CANCELLED'
@@ -259,11 +265,9 @@ export default function PatientCard({ lead, index, actions, onAction, onSchedule
             </span>
           </div>
 
+          <h3 className="mt-0.5 truncate text-sm font-medium text-slate-800">{lead.name}</h3>
+
           <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-slate-500">
-            <a href={`tel:${lead.phone}`} className="flex items-center gap-1 text-base font-semibold text-dental-600 hover:underline">
-              <Phone className="h-4 w-4" />
-              {lead.phone}
-            </a>
             {lead.clinic && (
               <span className="flex items-center gap-1">
                 <MapPin className="h-3.5 w-3.5" />

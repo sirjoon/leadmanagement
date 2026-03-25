@@ -10,6 +10,10 @@ import {
 } from '../middleware/tenant.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
 import { LeadStatus, Priority, LeadSource } from '@prisma/client';
+import {
+  normalizePhoneForUniqueness,
+  findActiveLeadIdWithSameNormalizedPhone,
+} from '../lib/phone.js';
 
 const router = Router();
 
@@ -115,10 +119,9 @@ router.get('/', asyncHandler(async (req: AuthenticatedRequest, res: Response) =>
     deletedAt: null,
   };
 
-  // LEAD_USER can only see assigned leads that are NOT yet assigned to a clinic (User Story L1 + Telecaller)
+  // LEAD_USER: all leads assigned to them (including when a clinic is set)
   if (isLeadUser(req.tenant.role)) {
     where.assignedUserId = req.tenant.userId;
-    where.clinicId = null;
   }
 
   // CLINIC_STAFF: scope to their clinic
@@ -414,21 +417,13 @@ router.get('/:id', asyncHandler(async (req: AuthenticatedRequest, res: Response)
     return;
   }
 
-  // LEAD_USER access check (User Story L1 + Telecaller: cannot see leads once assigned to clinic)
+  // LEAD_USER: may view any assigned lead (including after clinic handoff). Mutations still restricted on PATCH.
   if (isLeadUser(req.tenant.role)) {
     if (lead.assignedUserId !== req.tenant.userId) {
       res.status(403).json({
         error: 'Access denied',
         message: 'You can only view leads assigned to you.',
         code: 'NOT_ASSIGNED_LEAD'
-      });
-      return;
-    }
-    if (lead.clinicId) {
-      res.status(403).json({
-        error: 'Access denied',
-        message: 'This lead has been assigned to a clinic and is no longer visible to you. An admin can unassign the clinic if you need access again.',
-        code: 'LEAD_ASSIGNED_TO_CLINIC'
       });
       return;
     }
@@ -485,6 +480,23 @@ router.post('/', asyncHandler(async (req: AuthenticatedRequest, res: Response) =
   }
 
   const data = createLeadSchema.parse(req.body);
+
+  const normalizedPhone = normalizePhoneForUniqueness(data.phone);
+  const duplicateId = await findActiveLeadIdWithSameNormalizedPhone(
+    req.db,
+    req.tenant.id,
+    normalizedPhone
+  );
+  if (duplicateId) {
+    res.status(409).json({
+      error: 'Duplicate lead',
+      message:
+        'A lead with this phone number already exists. Use the existing lead or enter a different number.',
+      code: 'DUPLICATE_PHONE',
+      field: 'phone',
+    });
+    return;
+  }
 
   // Clinic staff can only create leads for their clinic
   let clinicId = data.clinicId;
@@ -560,6 +572,26 @@ router.patch('/:id', asyncHandler(async (req: AuthenticatedRequest, res: Respons
     return;
   }
 
+  if (data.phone !== undefined) {
+    const normalizedPhone = normalizePhoneForUniqueness(data.phone);
+    const duplicateId = await findActiveLeadIdWithSameNormalizedPhone(
+      req.db,
+      req.tenant.id,
+      normalizedPhone,
+      existingLead.id
+    );
+    if (duplicateId) {
+      res.status(409).json({
+        error: 'Duplicate lead',
+        message:
+          'Another lead already uses this phone number. Choose a different number.',
+        code: 'DUPLICATE_PHONE',
+        field: 'phone',
+      });
+      return;
+    }
+  }
+
   // CLINIC_STAFF: only for patient-journey leads in their clinic
   if (isClinicStaff(req.tenant.role)) {
     if (!PATIENT_JOURNEY_STATUSES.includes(existingLead.status)) {
@@ -593,22 +625,13 @@ router.patch('/:id', asyncHandler(async (req: AuthenticatedRequest, res: Respons
     }
   }
 
-  // LEAD_USER access check (User Story L1 + Telecaller)
+  // LEAD_USER: may update any lead assigned to them, including after clinic assignment
   if (isLeadUser(req.tenant.role)) {
     if (existingLead.assignedUserId !== req.tenant.userId) {
       res.status(403).json({
         error: 'Access denied',
         message: 'You can only update leads assigned to you.',
         code: 'NOT_ASSIGNED_LEAD'
-      });
-      return;
-    }
-    // Once lead is assigned to a clinic, Lead User cannot update it
-    if (existingLead.clinicId) {
-      res.status(403).json({
-        error: 'Access denied',
-        message: 'This lead has been assigned to a clinic and can no longer be edited by you.',
-        code: 'LEAD_ASSIGNED_TO_CLINIC'
       });
       return;
     }
