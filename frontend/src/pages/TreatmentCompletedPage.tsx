@@ -4,15 +4,15 @@ import {
   RefreshCw,
   AlertCircle,
   CheckCircle2,
-  XCircle,
-  PhoneOff,
-  Clock,
+  Stethoscope,
+  Calendar,
 } from 'lucide-react';
 import { type Lead, type LeadStatus, useLeadStore } from '../store/leadStore';
-import { useAuthStore, isAdminRole, isClinicStaffRole } from '../store/authStore';
+import { useAuthStore, isAdminRole } from '../store/authStore';
 import { api } from '../api/client';
 import { clsx } from 'clsx';
 import PatientCard, { type PatientAction } from '../components/PatientCard';
+import ScheduleAppointmentModal from '../components/ScheduleAppointmentModal';
 import LastUpdated from '../components/LastUpdated';
 import { useAutoRefresh } from '../hooks/useAutoRefresh';
 
@@ -22,36 +22,23 @@ interface Clinic {
   slug: string;
 }
 
-// Actions available on the Visited tab
-const visitedActions: PatientAction[] = [
+// Actions available on the Treatment Completed tab
+const treatmentCompletedActions: PatientAction[] = [
   {
-    label: 'Agrees Treatment',
-    status: 'TREATMENT_STARTED',
+    label: 'Back to Treatment',
+    status: 'TREATMENT_STARTED' as LeadStatus,
+    color: 'bg-teal-500 text-white hover:bg-teal-600',
+    icon: <Stethoscope className="h-3.5 w-3.5" />,
+  },
+  {
+    label: 'New Appointment',
+    status: 'APPOINTMENT_BOOKED' as LeadStatus,
     color: 'bg-emerald-500 text-white hover:bg-emerald-600',
-    icon: <CheckCircle2 className="h-3.5 w-3.5" />,
-  },
-  {
-    label: 'Denies Treatment',
-    status: 'TREATMENT_DENIED',
-    color: 'bg-rose-500 text-white hover:bg-rose-600',
-    icon: <XCircle className="h-3.5 w-3.5" />,
-  },
-  {
-    label: 'DNR',
-    status: 'DNR',
-    color: 'bg-orange-500 text-white hover:bg-orange-600',
-    icon: <PhoneOff className="h-3.5 w-3.5" />,
-    requiresConfirm: true,
-  },
-  {
-    label: 'Lost',
-    status: 'LOST',
-    color: 'bg-slate-500 text-white hover:bg-slate-600',
-    icon: <Clock className="h-3.5 w-3.5" />,
+    icon: <Calendar className="h-3.5 w-3.5" />,
   },
 ];
 
-export default function VisitedPage() {
+export default function TreatmentCompletedPage() {
   const {
     leads,
     pagination,
@@ -62,11 +49,6 @@ export default function VisitedPage() {
 
   const { user } = useAuthStore();
   const isAdmin = user?.role ? isAdminRole(user.role) : false;
-  const isStaff = user?.role ? isClinicStaffRole(user.role) : false;
-
-  const filteredActions = isStaff
-    ? visitedActions.filter(a => !['DNR', 'LOST'].includes(a.status))
-    : visitedActions;
 
   const [searchQuery, setSearchQuery] = useState('');
   const [clinicFilter, setClinicFilter] = useState('');
@@ -74,8 +56,11 @@ export default function VisitedPage() {
   const [sortBy, setSortBy] = useState<'updatedAt' | 'name' | 'createdAt'>('updatedAt');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
+  // Modals
+  const [scheduleModal, setScheduleModal] = useState<{ lead: Lead; targetStatus: LeadStatus } | null>(null);
+
   const buildFilters = useCallback(() => ({
-    status: 'VISITED' as LeadStatus,
+    status: 'TREATMENT_COMPLETED' as LeadStatus,
     search: searchQuery || undefined,
     clinicId: clinicFilter || undefined,
     sortBy,
@@ -107,13 +92,30 @@ export default function VisitedPage() {
   const { lastUpdatedText, refresh: autoRefresh } = useAutoRefresh(handleRefresh);
 
   const handleAction = async (lead: Lead, action: PatientAction) => {
-    // All actions are direct status updates — no schedule modal
+    // Back to Treatment → open schedule modal
+    if (action.label === 'Back to Treatment') {
+      setScheduleModal({ lead, targetStatus: 'TREATMENT_STARTED' });
+      return;
+    }
+
+    // New Appointment → open schedule modal
+    if (action.label === 'New Appointment') {
+      setScheduleModal({ lead, targetStatus: 'APPOINTMENT_BOOKED' });
+      return;
+    }
+
+    // Direct status updates
     try {
       await useLeadStore.getState().updateLead(lead.id, { status: action.status });
       fetchLeads(buildFilters());
     } catch {
       // handled by store
     }
+  };
+
+  const handleScheduleSuccess = () => {
+    setScheduleModal(null);
+    fetchLeads(buildFilters());
   };
 
   const handlePageChange = (page: number) => {
@@ -125,7 +127,7 @@ export default function VisitedPage() {
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="font-display text-2xl font-bold text-slate-900">Visited Patients</h1>
+          <h1 className="font-display text-2xl font-bold text-slate-900">Treatment Completed</h1>
           <div className="flex items-center gap-3">
             <p className="text-sm text-slate-500">
               {pagination.total} patients • Page {pagination.page} of {pagination.totalPages || 1}
@@ -143,7 +145,6 @@ export default function VisitedPage() {
             <RefreshCw className={clsx('h-5 w-5', isLoading && 'spinner')} />
           </button>
 
-          {/* Sort dropdown */}
           <select
             value={`${sortBy}-${sortOrder}`}
             onChange={(e) => {
@@ -207,7 +208,7 @@ export default function VisitedPage() {
         <div className="flex items-center justify-center py-12">
           <div className="flex flex-col items-center gap-3">
             <div className="h-10 w-10 rounded-full border-4 border-dental-200 border-t-dental-500 spinner" />
-            <p className="text-slate-500">Loading visited patients...</p>
+            <p className="text-slate-500">Loading completed treatments...</p>
           </div>
         </div>
       )}
@@ -215,12 +216,12 @@ export default function VisitedPage() {
       {/* Empty state */}
       {!isLoading && leads.length === 0 && (
         <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-slate-200 py-16">
-          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 text-2xl">
-            <CheckCircle2 className="h-8 w-8 text-emerald-600" />
+          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-green-100 text-2xl">
+            <CheckCircle2 className="h-8 w-8 text-green-600" />
           </div>
-          <h3 className="mt-4 font-semibold text-slate-900">No visited patients</h3>
+          <h3 className="mt-4 font-semibold text-slate-900">No completed treatments</h3>
           <p className="mt-1 text-sm text-slate-500">
-            {searchQuery ? 'Try adjusting your search' : 'Patients appear here after their appointment is marked completed'}
+            {searchQuery ? 'Try adjusting your search' : 'Patients appear here after treatment is marked completed'}
           </p>
         </div>
       )}
@@ -232,9 +233,9 @@ export default function VisitedPage() {
             key={lead.id}
             lead={lead}
             index={index}
-            actions={filteredActions}
+            actions={treatmentCompletedActions}
             onAction={handleAction}
-            onScheduleAppointment={() => {}}
+            onScheduleAppointment={(lead) => setScheduleModal({ lead, targetStatus: 'TREATMENT_STARTED' })}
           />
         ))}
       </div>
@@ -266,6 +267,16 @@ export default function VisitedPage() {
         </div>
       )}
 
+      {/* Schedule Appointment Modal */}
+      {scheduleModal && (
+        <ScheduleAppointmentModal
+          lead={scheduleModal.lead}
+          targetStatus={scheduleModal.targetStatus}
+          title={scheduleModal.targetStatus === 'TREATMENT_STARTED' ? 'Schedule Treatment' : 'Schedule Appointment'}
+          onClose={() => setScheduleModal(null)}
+          onSuccess={handleScheduleSuccess}
+        />
+      )}
     </div>
   );
 }

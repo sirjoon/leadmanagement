@@ -8,7 +8,8 @@ export type LeadStatus =
   | 'APPOINTMENT_BOOKED' 
   | 'VISITED' 
   | 'TREATMENT_STARTED'
-  | 'TREATMENT_DENIED' 
+  | 'TREATMENT_DENIED'
+  | 'TREATMENT_COMPLETED'
   | 'RESCHEDULED' 
   | 'LOST' 
   | 'DNA'  // Did Not Attend (User Story A3)

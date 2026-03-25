@@ -31,6 +31,7 @@ const statusLabels: Record<string, string> = {
   VISITED: 'Visited',
   TREATMENT_STARTED: 'Treatment',
   TREATMENT_DENIED: 'Tx Denied',
+  TREATMENT_COMPLETED: 'Tx Completed',
   LOST: 'Lost',
   DNR: 'DNR',
   DNC: 'DNC',

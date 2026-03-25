@@ -21,6 +21,7 @@ import {
   Inbox,
   Phone,
   PhoneCall,
+  ClipboardCheck,
 } from 'lucide-react';
 import { useState } from 'react';
 import { useAuthStore, isAdminRole, isClinicStaffRole, isLeadUserRole, Role } from '../store/authStore';
@@ -66,6 +67,7 @@ const navItems: NavItem[] = [
   { path: '/visited', label: 'Visited', icon: CheckCircle2, access: 'all', section: 'patient' },
   { path: '/treatment', label: 'Treatment', icon: Stethoscope, access: 'all', section: 'patient' },
   { path: '/treatment-denied', label: 'Tx Denied', icon: XCircle, access: 'all', section: 'patient' },
+  { path: '/treatment-completed', label: 'Tx Completed', icon: ClipboardCheck, access: 'all', section: 'patient' },
   { path: '/follow-ups', label: 'Follow-ups', icon: Clock, access: 'all', section: 'patient' },
   { path: '/dnr-dnc', label: 'DNR/DNC', icon: PhoneOff, access: 'no_staff', section: 'patient' },
   { path: '/lost', label: 'Lost', icon: UserX, access: 'no_staff', section: 'patient' },

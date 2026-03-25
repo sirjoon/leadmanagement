@@ -84,6 +84,7 @@ router.get('/today', asyncHandler(async (req: AuthenticatedRequest, res: Respons
           treatmentNotes: true,
           enquiryDate: true,
           source: true,
+          status: true,
         },
       },
       clinic: {
@@ -161,7 +162,7 @@ router.get('/staff-summary', asyncHandler(async (req: AuthenticatedRequest, res:
     where: { ...baseWhere, scheduledAt: { gte: startOfToday, lte: endOfToday } },
     include: {
       lead: {
-        select: { id: true, name: true, phone: true, age: true, treatmentInterest: true, treatmentPlan: true, source: true, patientLocation: true },
+        select: { id: true, name: true, phone: true, age: true, treatmentInterest: true, treatmentPlan: true, source: true, patientLocation: true, status: true },
       },
       clinic: { select: { id: true, name: true, slug: true } },
     },
@@ -187,7 +188,7 @@ router.get('/staff-summary', asyncHandler(async (req: AuthenticatedRequest, res:
   const upcomingAppointments = await req.db.appointment.findMany({
     where: { ...baseWhere, scheduledAt: { gte: startOfTomorrow }, status: { in: ['SCHEDULED', 'CONFIRMED', 'RESCHEDULED'] } },
     include: {
-      lead: { select: { id: true, name: true, phone: true, treatmentInterest: true, patientLocation: true } },
+      lead: { select: { id: true, name: true, phone: true, treatmentInterest: true, patientLocation: true, status: true } },
       clinic: { select: { id: true, name: true, slug: true } },
     },
     orderBy: { scheduledAt: 'asc' },
@@ -303,9 +304,9 @@ router.get('/', asyncHandler(async (req: AuthenticatedRequest, res: Response) =>
           treatmentNotes: true,
           enquiryDate: true,
           source: true,
+          status: true, // Always include — needed for treatment badge
           // Hide lead management fields from clinic staff
           ...(isClinicStaff(req.tenant.role) ? {} : {
-            status: true,
             priority: true,
             followUpDate: true,
             lastContactedAt: true,
@@ -428,6 +429,23 @@ router.post('/', asyncHandler(async (req: AuthenticatedRequest, res: Response) =
       error: 'Clinic not found',
       message: 'The specified clinic does not exist.',
       code: 'CLINIC_NOT_FOUND'
+    });
+    return;
+  }
+
+  // Check: only one active appointment per lead at a time
+  const activeAppointment = await req.db.appointment.findFirst({
+    where: {
+      leadId: data.leadId,
+      status: { in: ['SCHEDULED', 'CONFIRMED', 'RESCHEDULED'] },
+    },
+  });
+
+  if (activeAppointment) {
+    res.status(409).json({
+      error: 'Active appointment exists',
+      message: 'This patient already has an active appointment. Please reschedule the existing one or mark it as completed first.',
+      code: 'ACTIVE_APPOINTMENT_EXISTS',
     });
     return;
   }

@@ -47,6 +47,7 @@ interface Lead {
   treatmentNotes: string | null;
   enquiryDate: string | null;
   source: string;
+  status: string;
 }
 
 interface PatientNote {
@@ -593,6 +594,9 @@ export default function StaffDashboard() {
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2">
                           <p className="font-semibold text-slate-900">{apt.lead.name}</p>
+                          {apt.lead.status === 'TREATMENT_STARTED' && (
+                            <span className="rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-semibold text-blue-700">In Treatment</span>
+                          )}
                           {apt.lead.age && (
                             <span className="text-sm text-slate-500">({apt.lead.age} yrs)</span>
                           )}
@@ -699,17 +703,7 @@ export default function StaffDashboard() {
                                     <RefreshCw className="h-3.5 w-3.5" />
                                     Reschedule
                                   </button>
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleStatusUpdate(apt.id, 'CANCELLED', apt.lead.name);
-                                    }}
-                                    disabled={isUpdating}
-                                    className="flex items-center gap-1 rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-100 disabled:opacity-50"
-                                  >
-                                    <XCircle className="h-3.5 w-3.5" />
-                                    Cancel
-                                  </button>
+                                  {/* Cancel removed per CRM requirements — use Lost instead */}
                                 </>
                               )}
                               <a
@@ -744,7 +738,7 @@ export default function StaffDashboard() {
                             Update Status
                           </p>
                           <div className="flex flex-wrap gap-2">
-                            {(['CONFIRMED', 'COMPLETED', 'NO_SHOW', 'DNR', 'TWC', 'CANCELLED'] as AppointmentStatus[]).map(
+                            {(['CONFIRMED', 'COMPLETED', 'NO_SHOW', 'DNR', 'TWC'] as AppointmentStatus[]).map(
                               (status) => {
                                 const cfg = statusConfig[status];
                                 return (

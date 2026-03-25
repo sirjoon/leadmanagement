@@ -20,7 +20,7 @@ const router = Router();
 // Patient-journey statuses that clinic staff can access via journey tabs
 // (Visited, Treatment, Treatment Denied, DNR/DNC, Lost)
 const PATIENT_JOURNEY_STATUSES: LeadStatus[] = [
-  'VISITED', 'TREATMENT_STARTED', 'TREATMENT_DENIED', 'LOST', 'DNR', 'DNC', 'TWC',
+  'VISITED', 'TREATMENT_STARTED', 'TREATMENT_COMPLETED', 'TREATMENT_DENIED', 'LOST', 'DNR', 'DNC', 'TWC',
 ];
 
 // Lead User (Telecaller) can only set these statuses; once lead is assigned to clinic they cannot see it
@@ -119,9 +119,14 @@ router.get('/', asyncHandler(async (req: AuthenticatedRequest, res: Response) =>
     deletedAt: null,
   };
 
-  // LEAD_USER: all leads assigned to them (including when a clinic is set)
+  // LEAD_USER: all leads assigned to them; exclude clinic-originated DNR/DNC to avoid confusion
   if (isLeadUser(req.tenant.role)) {
     where.assignedUserId = req.tenant.userId;
+    // If filtering by DNR or DNC, only show leads without a clinic (telecaller's own pipeline)
+    const requestedStatus = req.query.status as string | undefined;
+    if (requestedStatus === 'DNR' || requestedStatus === 'DNC') {
+      where.clinicId = null;
+    }
   }
 
   // CLINIC_STAFF: scope to their clinic

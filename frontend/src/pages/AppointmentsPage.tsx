@@ -22,6 +22,7 @@ interface Appointment {
     name: string;
     phone: string;
     treatmentInterest: string | null;
+    status?: string;
   };
   clinic: {
     id: string;
@@ -67,7 +68,6 @@ const statusFilterOptions = [
   { value: 'NO_SHOW', label: 'Lost' },
   { value: 'DNR', label: 'DNR' },
   { value: 'TWC', label: 'TWC' },
-  { value: 'CANCELLED', label: 'Cancelled' },
 ];
 
 function AppointmentsCalendar() {
@@ -271,7 +271,12 @@ function AppointmentsCalendar() {
                             <RefreshCw className="h-3 w-3" />
                           </button>
                         </div>
-                        <p className="mt-1 font-medium truncate">{apt.lead.name}</p>
+                        <p className="mt-1 font-medium truncate">
+                          {apt.lead.name}
+                          {apt.lead.status === 'TREATMENT_STARTED' && (
+                            <span className="ml-1 rounded bg-blue-100 px-1 text-[9px] font-semibold text-blue-700">Tx</span>
+                          )}
+                        </p>
                         <p className="text-[10px] opacity-75">{apt.clinic.name}</p>
                         {apt.status === 'RESCHEDULED' && reason && (
                           <p className="mt-1 text-[10px] italic opacity-75 truncate" title={reason}>
@@ -327,7 +332,12 @@ function AppointmentsCalendar() {
                     </div>
 
                     <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-slate-900">{apt.lead.name}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="font-semibold text-slate-900">{apt.lead.name}</p>
+                        {apt.lead.status === 'TREATMENT_STARTED' && (
+                          <span className="rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-semibold text-blue-700">In Treatment</span>
+                        )}
+                      </div>
                       <div className="mt-1 flex flex-wrap items-center gap-3 text-sm text-slate-500">
                         <span className="flex items-center gap-1">
                           <Clock className="h-3.5 w-3.5" />
@@ -364,21 +374,7 @@ function AppointmentsCalendar() {
                           >
                             <RefreshCw className="h-4 w-4" />
                           </button>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleCancelAppointment(apt);
-                            }}
-                            disabled={updating === apt.id}
-                            className="rounded-lg border border-slate-200 p-2 text-slate-500 hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
-                            title="Cancel appointment"
-                          >
-                            {updating === apt.id ? (
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                            ) : (
-                              <XCircle className="h-4 w-4" />
-                            )}
-                          </button>
+                          {/* Cancel removed — use Lost instead */}
                         </>
                       )}
                       <span className={clsx(

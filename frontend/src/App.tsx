@@ -13,6 +13,7 @@ import StaffSummaryPage from './pages/StaffSummaryPage';
 import VisitedPage from './pages/VisitedPage';
 import TreatmentPage from './pages/TreatmentPage';
 import TreatmentDeniedPage from './pages/TreatmentDeniedPage';
+import TreatmentCompletedPage from './pages/TreatmentCompletedPage';
 import FollowUpsPage from './pages/FollowUpsPage';
 import DnrDncPage from './pages/DnrDncPage';
 import LostPage from './pages/LostPage';
@@ -155,6 +156,7 @@ function App() {
                 <Route path="/visited" element={<NoLeadUserRoute><VisitedPage /></NoLeadUserRoute>} />
                 <Route path="/treatment" element={<NoLeadUserRoute><TreatmentPage /></NoLeadUserRoute>} />
                 <Route path="/treatment-denied" element={<NoLeadUserRoute><TreatmentDeniedPage /></NoLeadUserRoute>} />
+                <Route path="/treatment-completed" element={<NoLeadUserRoute><TreatmentCompletedPage /></NoLeadUserRoute>} />
                 <Route path="/follow-ups" element={<NoLeadUserRoute><FollowUpsPage /></NoLeadUserRoute>} />
                 <Route path="/dnr-dnc" element={<DnrDncPage />} />
                 <Route path="/lost" element={<NoLeadUserRoute><LostPage /></NoLeadUserRoute>} />

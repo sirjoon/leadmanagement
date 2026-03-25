@@ -140,6 +140,7 @@ enum LeadStatus {
   VISITED
   TREATMENT_STARTED   // Active treatment
   TREATMENT_DENIED    // Patient denied treatment
+  TREATMENT_COMPLETED // Treatment finished
   RESCHEDULED
   LOST
   DNA               // Did Not Attend

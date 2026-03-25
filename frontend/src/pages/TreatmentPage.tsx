@@ -17,7 +17,6 @@ import { api } from '../api/client';
 import { clsx } from 'clsx';
 import PatientCard, { type PatientAction, type NextAppointmentInfo } from '../components/PatientCard';
 import ScheduleAppointmentModal from '../components/ScheduleAppointmentModal';
-import VisitOutcomeDialog from '../components/VisitOutcomeDialog';
 import RescheduleModal from '../components/RescheduleModal';
 import LastUpdated from '../components/LastUpdated';
 import { useAutoRefresh } from '../hooks/useAutoRefresh';
@@ -43,9 +42,9 @@ interface Appointment {
 // Actions available on the Treatment tab
 const treatmentActions: PatientAction[] = [
   {
-    label: 'Mark Visited',
-    status: 'VISITED' as LeadStatus, // placeholder — handled in onAction
-    color: 'bg-emerald-500 text-white hover:bg-emerald-600',
+    label: 'Treatment Completed',
+    status: 'TREATMENT_COMPLETED' as LeadStatus,
+    color: 'bg-green-600 text-white hover:bg-green-700',
     icon: <CheckCircle2 className="h-3.5 w-3.5" />,
   },
   {
@@ -95,9 +94,7 @@ export default function TreatmentPage() {
   // Modals
   const [scheduleModal, setScheduleModal] = useState<Lead | null>(null);
   const [scheduleSkipStatus, setScheduleSkipStatus] = useState(false);
-  const [outcomeDialog, setOutcomeDialog] = useState<Lead | null>(null);
   const [rescheduleModal, setRescheduleModal] = useState<{ appointment: Appointment; patientName: string } | null>(null);
-  const [markVisitedLoading, setMarkVisitedLoading] = useState<string | null>(null);
   const [cancellingApptId, setCancellingApptId] = useState<string | null>(null);
 
   // Upcoming appointments
@@ -170,26 +167,6 @@ export default function TreatmentPage() {
   const { lastUpdatedText, refresh: autoRefresh } = useAutoRefresh(handleRefresh);
 
   const handleAction = async (lead: Lead, action: PatientAction) => {
-    // Mark Visited: find latest SCHEDULED/CONFIRMED appointment → COMPLETED → show outcome dialog
-    if (action.label === 'Mark Visited') {
-      setMarkVisitedLoading(lead.id);
-      try {
-        // Find lead's latest scheduled appointment
-        const appt = leadAppointments[lead.id];
-        if (appt) {
-          await api.patch(`/appointments/${appt.id}`, { status: 'COMPLETED' });
-        }
-        // Show outcome dialog
-        setOutcomeDialog(lead);
-      } catch {
-        // If no appointment, still show outcome dialog
-        setOutcomeDialog(lead);
-      } finally {
-        setMarkVisitedLoading(null);
-      }
-      return;
-    }
-
     // Schedule: open modal with skipStatusUpdate
     if (action.label === 'Schedule') {
       setScheduleSkipStatus(true);
@@ -197,35 +174,13 @@ export default function TreatmentPage() {
       return;
     }
 
-    // DNR, Lost — direct status update
+    // Treatment Completed, DNR, Lost — direct status update
     try {
       await useLeadStore.getState().updateLead(lead.id, { status: action.status });
       fetchLeads(buildFilters());
       loadAppointments();
     } catch {
       // handled by store
-    }
-  };
-
-  const handleTreatmentAccepted = () => {
-    // Lead stays TREATMENT_STARTED — open schedule modal for next appointment
-    const lead = outcomeDialog;
-    setOutcomeDialog(null);
-    if (lead) {
-      setScheduleSkipStatus(true);
-      setScheduleModal(lead);
-    }
-  };
-
-  const handleTreatmentDenied = async () => {
-    if (!outcomeDialog) return;
-    try {
-      await useLeadStore.getState().updateLead(outcomeDialog.id, { status: 'TREATMENT_DENIED' as LeadStatus });
-      setOutcomeDialog(null);
-      fetchLeads(buildFilters());
-      loadAppointments();
-    } catch {
-      setOutcomeDialog(null);
     }
   };
 
@@ -382,11 +337,6 @@ export default function TreatmentPage() {
       <div className="space-y-3">
         {leads.map((lead, index) => (
           <div key={lead.id} className="relative">
-            {markVisitedLoading === lead.id && (
-              <div className="absolute inset-0 z-10 flex items-center justify-center rounded-xl bg-white/70">
-                <Loader2 className="h-6 w-6 text-teal-500 spinner" />
-              </div>
-            )}
             <PatientCard
               lead={lead}
               index={index}
@@ -500,18 +450,7 @@ export default function TreatmentPage() {
                             >
                               Reschedule
                             </button>
-                            <button
-                              onClick={() => handleCancelAppointment(appt)}
-                              disabled={cancellingApptId === appt.id}
-                              className="flex items-center gap-1 rounded-lg border border-red-200 px-2.5 py-1 text-xs font-medium text-red-600 hover:bg-red-50 disabled:opacity-50"
-                            >
-                              {cancellingApptId === appt.id ? (
-                                <Loader2 className="h-3 w-3 animate-spin" />
-                              ) : (
-                                <XCircle className="h-3 w-3" />
-                              )}
-                              Cancel
-                            </button>
+                            {/* Cancel removed — use Lost instead */}
                           </div>
                         </td>
                       </tr>
@@ -538,16 +477,6 @@ export default function TreatmentPage() {
           skipStatusUpdate={scheduleSkipStatus}
           onClose={() => { setScheduleModal(null); setScheduleSkipStatus(false); }}
           onSuccess={handleScheduleSuccess}
-        />
-      )}
-
-      {/* Visit Outcome Dialog */}
-      {outcomeDialog && (
-        <VisitOutcomeDialog
-          patientName={outcomeDialog.name}
-          onTreatmentAccepted={handleTreatmentAccepted}
-          onTreatmentDenied={handleTreatmentDenied}
-          onClose={() => setOutcomeDialog(null)}
         />
       )}
 
