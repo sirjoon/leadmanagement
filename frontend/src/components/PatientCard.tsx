@@ -25,6 +25,7 @@ const statusLabels: Record<string, string> = {
   TREATMENT_COMPLETED: 'Tx Completed',
   LOST: 'Lost',
   DNR: 'DNR',
+  CLINICAL_DNR: 'Clinical DNR',
   DNC: 'DNC',
   TWC: 'TWC',
   RESCHEDULED: 'Rescheduled',
@@ -37,6 +38,7 @@ const statusColors: Record<string, string> = {
   TREATMENT_COMPLETED: 'bg-green-100 text-green-700 ring-green-500/20',
   LOST: 'bg-red-100 text-red-700 ring-red-500/20',
   DNR: 'bg-gray-200 text-gray-700 ring-gray-500/20',
+  CLINICAL_DNR: 'bg-purple-100 text-purple-700 ring-purple-500/20',
   DNC: 'bg-gray-100 text-gray-600 ring-gray-500/20',
   TWC: 'bg-cyan-100 text-cyan-700 ring-cyan-500/20',
   RESCHEDULED: 'bg-orange-100 text-orange-700 ring-orange-500/20',
@@ -89,7 +91,7 @@ export default function PatientCard({ lead, index, actions, onAction, onSchedule
   }, [lead.id, lead.name, lead.phone]);
 
   const handleAction = (action: PatientAction) => {
-    if (action.status === 'DNR') {
+    if (action.status === 'DNR' || action.status === 'CLINICAL_DNR') {
       setShowDNRConfirm(true);
       return;
     }
@@ -98,7 +100,7 @@ export default function PatientCard({ lead, index, actions, onAction, onSchedule
 
   const handleDNRConfirm = () => {
     setShowDNRConfirm(false);
-    const dnrAction = actions.find(a => a.status === 'DNR');
+    const dnrAction = actions.find(a => a.status === 'DNR' || a.status === 'CLINICAL_DNR');
     if (dnrAction) onAction(lead, dnrAction);
   };
 

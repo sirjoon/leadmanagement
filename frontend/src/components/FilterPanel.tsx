@@ -26,6 +26,7 @@ const statuses: { value: LeadStatus; label: string; icon: string }[] = [
   { value: 'LOST', label: 'Lost', icon: '❌' },
   { value: 'DNC', label: 'DNC', icon: '🚫' },
   { value: 'DNR', label: 'DNR', icon: '📵' },
+  { value: 'CLINICAL_DNR', label: 'Clinical DNR', icon: '🏥' },
 ];
 
 const priorities: { value: Priority; label: string; icon: string }[] = [

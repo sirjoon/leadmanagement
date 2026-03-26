@@ -3,11 +3,9 @@ import {
   Search,
   RefreshCw,
   AlertCircle,
-  XCircle,
-  Stethoscope,
-  Calendar,
   PhoneOff,
-  Clock,
+  Calendar,
+  Stethoscope,
 } from 'lucide-react';
 import { type Lead, type LeadStatus, useLeadStore } from '../store/leadStore';
 import { useAuthStore, isAdminRole, isClinicStaffRole } from '../store/authStore';
@@ -24,14 +22,8 @@ interface Clinic {
   slug: string;
 }
 
-// Actions available on the Treatment Denied tab
-const treatmentDeniedActions: PatientAction[] = [
-  {
-    label: 'Move to Treatment',
-    status: 'TREATMENT_STARTED' as LeadStatus,
-    color: 'bg-teal-500 text-white hover:bg-teal-600',
-    icon: <Stethoscope className="h-3.5 w-3.5" />,
-  },
+// Actions available on the Clinical DNR tab
+const clinicalDnrActions: PatientAction[] = [
   {
     label: 'New Appointment',
     status: 'APPOINTMENT_BOOKED' as LeadStatus,
@@ -39,21 +31,14 @@ const treatmentDeniedActions: PatientAction[] = [
     icon: <Calendar className="h-3.5 w-3.5" />,
   },
   {
-    label: 'Clinical DNR',
-    status: 'CLINICAL_DNR' as LeadStatus,
-    color: 'bg-purple-500 text-white hover:bg-purple-600',
-    icon: <PhoneOff className="h-3.5 w-3.5" />,
-    requiresConfirm: true,
-  },
-  {
-    label: 'Lost',
-    status: 'LOST',
-    color: 'bg-slate-500 text-white hover:bg-slate-600',
-    icon: <Clock className="h-3.5 w-3.5" />,
+    label: 'Move to Treatment',
+    status: 'TREATMENT_STARTED' as LeadStatus,
+    color: 'bg-teal-500 text-white hover:bg-teal-600',
+    icon: <Stethoscope className="h-3.5 w-3.5" />,
   },
 ];
 
-export default function TreatmentDeniedPage() {
+export default function ClinicalDnrPage() {
   const {
     leads,
     pagination,
@@ -64,11 +49,6 @@ export default function TreatmentDeniedPage() {
 
   const { user } = useAuthStore();
   const isAdmin = user?.role ? isAdminRole(user.role) : false;
-  const isStaff = user?.role ? isClinicStaffRole(user.role) : false;
-
-  const filteredActions = isStaff
-    ? treatmentDeniedActions.filter(a => !['DNR', 'LOST'].includes(a.status))
-    : treatmentDeniedActions;
 
   const [searchQuery, setSearchQuery] = useState('');
   const [clinicFilter, setClinicFilter] = useState('');
@@ -80,7 +60,7 @@ export default function TreatmentDeniedPage() {
   const [scheduleModal, setScheduleModal] = useState<{ lead: Lead; targetStatus: LeadStatus } | null>(null);
 
   const buildFilters = useCallback(() => ({
-    status: 'TREATMENT_DENIED' as LeadStatus,
+    status: 'CLINICAL_DNR' as LeadStatus,
     inTreatment: undefined,
     search: searchQuery || undefined,
     clinicId: clinicFilter || undefined,
@@ -113,19 +93,16 @@ export default function TreatmentDeniedPage() {
   const { lastUpdatedText, refresh: autoRefresh } = useAutoRefresh(handleRefresh);
 
   const handleAction = async (lead: Lead, action: PatientAction) => {
-    // Move to Treatment → open schedule modal, target TREATMENT_STARTED
-    if (action.label === 'Move to Treatment') {
-      setScheduleModal({ lead, targetStatus: 'TREATMENT_STARTED' });
-      return;
-    }
-
-    // New Appointment → open schedule modal, target APPOINTMENT_BOOKED
     if (action.label === 'New Appointment') {
       setScheduleModal({ lead, targetStatus: 'APPOINTMENT_BOOKED' });
       return;
     }
 
-    // DNR, Lost — direct status update
+    if (action.label === 'Move to Treatment') {
+      setScheduleModal({ lead, targetStatus: 'TREATMENT_STARTED' });
+      return;
+    }
+
     try {
       await useLeadStore.getState().updateLead(lead.id, { status: action.status });
       fetchLeads(buildFilters());
@@ -148,7 +125,7 @@ export default function TreatmentDeniedPage() {
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="font-display text-2xl font-bold text-slate-900">Treatment Denied</h1>
+          <h1 className="font-display text-2xl font-bold text-slate-900">Clinical DNR</h1>
           <div className="flex items-center gap-3">
             <p className="text-sm text-slate-500">
               {pagination.total} patients • Page {pagination.page} of {pagination.totalPages || 1}
@@ -229,7 +206,7 @@ export default function TreatmentDeniedPage() {
         <div className="flex items-center justify-center py-12">
           <div className="flex flex-col items-center gap-3">
             <div className="h-10 w-10 rounded-full border-4 border-dental-200 border-t-dental-500 spinner" />
-            <p className="text-slate-500">Loading treatment denied patients...</p>
+            <p className="text-slate-500">Loading clinical DNR patients...</p>
           </div>
         </div>
       )}
@@ -237,12 +214,12 @@ export default function TreatmentDeniedPage() {
       {/* Empty state */}
       {!isLoading && leads.length === 0 && (
         <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-slate-200 py-16">
-          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-rose-100 text-2xl">
-            <XCircle className="h-8 w-8 text-rose-600" />
+          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-purple-100 text-2xl">
+            <PhoneOff className="h-8 w-8 text-purple-600" />
           </div>
-          <h3 className="mt-4 font-semibold text-slate-900">No treatment denied patients</h3>
+          <h3 className="mt-4 font-semibold text-slate-900">No clinical DNR patients</h3>
           <p className="mt-1 text-sm text-slate-500">
-            {searchQuery ? 'Try adjusting your search' : 'Patients appear here after denying treatment'}
+            {searchQuery ? 'Try adjusting your search' : 'Patients appear here when the clinic marks them as Clinical DNR'}
           </p>
         </div>
       )}
@@ -254,9 +231,9 @@ export default function TreatmentDeniedPage() {
             key={lead.id}
             lead={lead}
             index={index}
-            actions={filteredActions}
+            actions={clinicalDnrActions}
             onAction={handleAction}
-            onScheduleAppointment={(lead) => setScheduleModal({ lead, targetStatus: 'TREATMENT_STARTED' })}
+            onScheduleAppointment={(lead) => setScheduleModal({ lead, targetStatus: 'APPOINTMENT_BOOKED' })}
           />
         ))}
       </div>

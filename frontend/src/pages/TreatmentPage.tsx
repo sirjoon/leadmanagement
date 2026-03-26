@@ -54,9 +54,9 @@ const treatmentActions: PatientAction[] = [
     icon: <Calendar className="h-3.5 w-3.5" />,
   },
   {
-    label: 'DNR',
-    status: 'DNR',
-    color: 'bg-orange-500 text-white hover:bg-orange-600',
+    label: 'Clinical DNR',
+    status: 'CLINICAL_DNR' as LeadStatus,
+    color: 'bg-purple-500 text-white hover:bg-purple-600',
     icon: <PhoneOff className="h-3.5 w-3.5" />,
     requiresConfirm: true,
   },

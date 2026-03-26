@@ -16,6 +16,7 @@ import TreatmentDeniedPage from './pages/TreatmentDeniedPage';
 import TreatmentCompletedPage from './pages/TreatmentCompletedPage';
 import FollowUpsPage from './pages/FollowUpsPage';
 import DnrDncPage from './pages/DnrDncPage';
+import ClinicalDnrPage from './pages/ClinicalDnrPage';
 import LostPage from './pages/LostPage';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -158,6 +159,7 @@ function App() {
                 <Route path="/treatment-denied" element={<NoLeadUserRoute><TreatmentDeniedPage /></NoLeadUserRoute>} />
                 <Route path="/treatment-completed" element={<NoLeadUserRoute><TreatmentCompletedPage /></NoLeadUserRoute>} />
                 <Route path="/follow-ups" element={<NoLeadUserRoute><FollowUpsPage /></NoLeadUserRoute>} />
+                <Route path="/clinical-dnr" element={<ClinicalDnrPage />} />
                 <Route path="/dnr-dnc" element={<DnrDncPage />} />
                 <Route path="/lost" element={<NoLeadUserRoute><LostPage /></NoLeadUserRoute>} />
 

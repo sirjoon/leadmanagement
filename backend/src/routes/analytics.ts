@@ -53,6 +53,7 @@ router.get('/summary', requireRole('ADMIN', 'SUPER_ADMIN'), asyncHandler(async (
     dnaLeads,      // Did Not Attend (User Story A3)
     dncLeads,
     dnrLeads,
+    clinicalDnrLeads,
   ] = await Promise.all([
     req.db.lead.count({ where }),
     req.db.lead.count({ where: { ...where, status: 'NEW' } }),
@@ -66,6 +67,7 @@ router.get('/summary', requireRole('ADMIN', 'SUPER_ADMIN'), asyncHandler(async (
     req.db.lead.count({ where: { ...where, status: 'DNA' } }),
     req.db.lead.count({ where: { ...where, status: 'DNC' } }),
     req.db.lead.count({ where: { ...where, status: 'DNR' } }),
+    req.db.lead.count({ where: { ...where, status: 'CLINICAL_DNR' } }),
   ]);
 
   // Get leads with follow-up scheduled
@@ -75,10 +77,10 @@ router.get('/summary', requireRole('ADMIN', 'SUPER_ADMIN'), asyncHandler(async (
 
   // Get overdue follow-ups (User Story A2 - tracking)
   const overdueFollowUps = await req.db.lead.count({
-    where: { 
-      ...where, 
+    where: {
+      ...where,
       followUpDate: { lt: new Date() },
-      status: { notIn: ['LOST', 'DNC', 'DNR', 'TREATMENT_STARTED'] },
+      status: { notIn: ['LOST', 'DNC', 'DNR', 'CLINICAL_DNR', 'TREATMENT_STARTED'] },
     },
   });
 
@@ -111,6 +113,7 @@ router.get('/summary', requireRole('ADMIN', 'SUPER_ADMIN'), asyncHandler(async (
       dnaLeads,
       dncLeads,
       dnrLeads,
+      clinicalDnrLeads,
       conversionRate: parseFloat(conversionRate),
       dropOffRate: parseFloat(dropOffRate),
       followUpCompliance: parseFloat(followUpCompliance),

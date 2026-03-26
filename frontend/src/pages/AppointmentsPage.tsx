@@ -38,6 +38,7 @@ const statusColors: Record<string, string> = {
   CANCELLED: 'bg-red-100 text-red-700 border-red-200',
   NO_SHOW: 'bg-orange-100 text-orange-700 border-orange-200',
   RESCHEDULED: 'bg-yellow-100 text-yellow-700 border-yellow-200',
+  CLINICAL_DNR: 'bg-purple-100 text-purple-700 border-purple-200',
 };
 
 export default function AppointmentsPage() {
@@ -67,6 +68,7 @@ const statusFilterOptions = [
   { value: 'COMPLETED', label: 'Visited' },
   { value: 'NO_SHOW', label: 'Lost' },
   { value: 'DNR', label: 'DNR' },
+  { value: 'CLINICAL_DNR', label: 'Clinical DNR' },
   { value: 'TWC', label: 'TWC' },
 ];
 

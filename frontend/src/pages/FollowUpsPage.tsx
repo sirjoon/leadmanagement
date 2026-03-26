@@ -34,6 +34,7 @@ const statusLabels: Record<string, string> = {
   TREATMENT_COMPLETED: 'Tx Completed',
   LOST: 'Lost',
   DNR: 'DNR',
+  CLINICAL_DNR: 'Clinical DNR',
   DNC: 'DNC',
   TWC: 'TWC',
   RESCHEDULED: 'Rescheduled',
@@ -58,6 +59,7 @@ function getActionsForStatus(status: LeadStatus): PatientAction[] {
         { label: 'Lost', status: 'LOST', color: 'bg-slate-500 text-white hover:bg-slate-600', icon: <Clock className="h-3.5 w-3.5" /> },
       ];
     case 'DNR':
+    case 'CLINICAL_DNR':
     case 'DNC':
       return [
         { label: 'Move to Treatment', status: 'TREATMENT_STARTED', color: 'bg-teal-500 text-white hover:bg-teal-600', icon: <Stethoscope className="h-3.5 w-3.5" /> },

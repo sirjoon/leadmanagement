@@ -148,7 +148,8 @@ enum LeadStatus {
   LOST
   DNA               // Did Not Attend
   DNC               // Do Not Contact
-  DNR               // Do Not Return
+  DNR               // Do Not Return (Lead/Telecaller level)
+  CLINICAL_DNR      // Clinical DNR — clinic-level, patient not responding to clinic calls
   TWC               // To Be Called / Will Call Back
 }
 
@@ -241,8 +242,9 @@ enum AppointmentStatus {
   CANCELLED
   NO_SHOW
   RESCHEDULED
-  DNR        // Did Not Respond / Did Not Report
-  TWC        // To Will Call - patient will call back
+  DNR            // Did Not Respond / Did Not Report
+  CLINICAL_DNR   // Clinical DNR — clinic-level
+  TWC            // To Will Call - patient will call back
 }
 
 // ── PLATFORM-LEVEL TENANT REGISTRY ───────────────────────

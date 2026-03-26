@@ -69,6 +69,7 @@ const navItems: NavItem[] = [
   { path: '/treatment-denied', label: 'Tx Denied', icon: XCircle, access: 'all', section: 'patient' },
   { path: '/treatment-completed', label: 'Tx Completed', icon: ClipboardCheck, access: 'all', section: 'patient' },
   { path: '/follow-ups', label: 'Follow-ups', icon: Clock, access: 'all', section: 'patient' },
+  { path: '/clinical-dnr', label: 'Clinical DNR', icon: PhoneOff, access: 'all', section: 'patient' },
   { path: '/dnr-dnc', label: 'DNR/DNC', icon: PhoneOff, access: 'no_staff', section: 'patient' },
   { path: '/lost', label: 'Lost', icon: UserX, access: 'no_staff', section: 'patient' },
   // Admin tools

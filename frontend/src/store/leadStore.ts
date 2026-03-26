@@ -15,6 +15,7 @@ export type LeadStatus =
   | 'DNA'  // Did Not Attend (User Story A3)
   | 'DNC' 
   | 'DNR'
+| 'CLINICAL_DNR'
   | 'TWC'; // To Be Called / Will Call Back
 
 export type Priority = 'HOT' | 'WARM' | 'COLD';

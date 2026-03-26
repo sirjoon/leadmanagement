@@ -101,7 +101,7 @@ router.get('/today', asyncHandler(async (req: AuthenticatedRequest, res: Respons
     confirmed: appointments.filter(a => a.status === 'CONFIRMED').length,
     scheduled: appointments.filter(a => a.status === 'SCHEDULED').length,
     noShow: appointments.filter(a => a.status === 'NO_SHOW').length,
-    dnr: appointments.filter(a => a.status === 'DNR').length,
+    dnr: appointments.filter(a => a.status === 'DNR' || a.status === 'CLINICAL_DNR').length,
     twc: appointments.filter(a => a.status === 'TWC').length,
     rescheduled: appointments.filter(a => a.status === 'RESCHEDULED').length,
   };
@@ -203,7 +203,7 @@ router.get('/staff-summary', asyncHandler(async (req: AuthenticatedRequest, res:
     noShow: appts.filter(a => a.status === 'NO_SHOW').length,
     cancelled: appts.filter(a => a.status === 'CANCELLED').length,
     rescheduled: appts.filter(a => a.status === 'RESCHEDULED').length,
-    dnr: appts.filter(a => a.status === 'DNR').length,
+    dnr: appts.filter(a => a.status === 'DNR' || a.status === 'CLINICAL_DNR').length,
     twc: appts.filter(a => a.status === 'TWC').length,
   });
 
@@ -601,11 +601,11 @@ router.patch('/:id', asyncHandler(async (req: AuthenticatedRequest, res: Respons
       return;
     }
 
-    // Staff can set status to RESCHEDULED, CONFIRMED, NO_SHOW, COMPLETED, DNR, TWC, or CANCELLED
-    if (data.status && !['RESCHEDULED', 'CONFIRMED', 'NO_SHOW', 'COMPLETED', 'DNR', 'TWC', 'CANCELLED'].includes(data.status)) {
-      res.status(403).json({ 
+    // Staff can set status to RESCHEDULED, CONFIRMED, NO_SHOW, COMPLETED, DNR, CLINICAL_DNR, TWC, or CANCELLED
+    if (data.status && !['RESCHEDULED', 'CONFIRMED', 'NO_SHOW', 'COMPLETED', 'DNR', 'CLINICAL_DNR', 'TWC', 'CANCELLED'].includes(data.status)) {
+      res.status(403).json({
         error: 'Permission denied',
-        message: 'Clinic staff can only mark appointments as Rescheduled, Confirmed, Completed, No Show, DNR, TWC, or Cancelled.',
+        message: 'Clinic staff can only mark appointments as Rescheduled, Confirmed, Completed, No Show, DNR, Clinical DNR, TWC, or Cancelled.',
         code: 'INVALID_STAFF_STATUS'
       });
       return;
@@ -709,6 +709,7 @@ router.patch('/:id', asyncHandler(async (req: AuthenticatedRequest, res: Respons
       COMPLETED: 'VISITED',
       NO_SHOW: 'LOST',
       DNR: 'DNR',
+      CLINICAL_DNR: 'CLINICAL_DNR',
       RESCHEDULED: 'RESCHEDULED',
       TWC: 'TWC',
     };
@@ -716,6 +717,7 @@ router.patch('/:id', asyncHandler(async (req: AuthenticatedRequest, res: Respons
       COMPLETED: 'Visited',
       NO_SHOW: 'Lost',
       DNR: 'DNR',
+      CLINICAL_DNR: 'Clinical DNR',
       RESCHEDULED: 'Rescheduled',
       TWC: 'TWC (Will Call Back)',
     };

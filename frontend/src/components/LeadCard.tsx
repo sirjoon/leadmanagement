@@ -43,6 +43,7 @@ const statusColors: Record<LeadStatus, string> = {
   DNA: 'bg-amber-100 text-amber-700 ring-amber-500/20',
   DNC: 'bg-gray-100 text-gray-600 ring-gray-500/20',
   DNR: 'bg-gray-200 text-gray-700 ring-gray-500/20',
+  CLINICAL_DNR: 'bg-purple-100 text-purple-700 ring-purple-500/20',
   TWC: 'bg-cyan-100 text-cyan-700 ring-cyan-500/20',
 };
 
@@ -60,6 +61,7 @@ const statusLabels: Record<LeadStatus, string> = {
   DNA: 'DNA',
   DNC: 'DNC',
   DNR: 'DNR',
+  CLINICAL_DNR: 'Clinical DNR',
   TWC: 'TWC',
 };
 
@@ -73,7 +75,7 @@ const STATUSES_REQUIRING_FOLLOWUP: LeadStatus[] = [
 // All statuses for admin, limited for lead users
 const adminStatuses: LeadStatus[] = [
   'NEW', 'CONNECTED', 'APPOINTMENT_BOOKED', 'VISITED',
-  'TREATMENT_STARTED', 'TREATMENT_DENIED', 'RESCHEDULED', 'LOST', 'DNA', 'DNC', 'DNR', 'TWC',
+  'TREATMENT_STARTED', 'TREATMENT_DENIED', 'RESCHEDULED', 'LOST', 'DNA', 'DNC', 'DNR', 'CLINICAL_DNR', 'TWC',
 ];
 
 // Lead User (Telecaller) can only use: New, Connected, Booked, DNR, DNC, TWC

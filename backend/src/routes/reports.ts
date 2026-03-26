@@ -54,7 +54,7 @@ router.get('/dnc-dnr', requireRole('ADMIN', 'SUPER_ADMIN'), asyncHandler(async (
       orderBy: { updatedAt: 'desc' },
     }),
     req.db.lead.findMany({
-      where: { ...baseWhere, status: 'DNR' },
+      where: { ...baseWhere, status: { in: ['DNR', 'CLINICAL_DNR'] } },
       include: {
         clinic: { select: { id: true, name: true, slug: true } },
         notes: {
@@ -63,7 +63,7 @@ router.get('/dnc-dnr', requireRole('ADMIN', 'SUPER_ADMIN'), asyncHandler(async (
           include: { author: { select: { name: true } } },
         },
         statusHistory: {
-          where: { toStatus: 'DNR' },
+          where: { toStatus: { in: ['DNR', 'CLINICAL_DNR'] } },
           orderBy: { createdAt: 'desc' },
           take: 1,
         },
@@ -72,7 +72,7 @@ router.get('/dnc-dnr', requireRole('ADMIN', 'SUPER_ADMIN'), asyncHandler(async (
     }),
   ]);
 
-  // Per-clinic DNC/DNR breakdown
+  // Per-clinic DNC/DNR/Clinical DNR breakdown
   const clinics = await req.db.clinic.findMany({
     where: { tenantId: req.tenant.id, isActive: true },
   });
@@ -80,9 +80,10 @@ router.get('/dnc-dnr', requireRole('ADMIN', 'SUPER_ADMIN'), asyncHandler(async (
   const clinicBreakdown = await Promise.all(
     clinics.map(async (clinic) => {
       const clinicWhere = { ...baseWhere, clinicId: clinic.id };
-      const [dncCount, dnrCount, totalLeads] = await Promise.all([
+      const [dncCount, dnrCount, clinicalDnrCount, totalLeads] = await Promise.all([
         req.db!.lead.count({ where: { ...clinicWhere, status: 'DNC' } }),
         req.db!.lead.count({ where: { ...clinicWhere, status: 'DNR' } }),
+        req.db!.lead.count({ where: { ...clinicWhere, status: 'CLINICAL_DNR' } }),
         req.db!.lead.count({ where: { ...clinicWhere } }),
       ]);
 
@@ -92,6 +93,7 @@ router.get('/dnc-dnr', requireRole('ADMIN', 'SUPER_ADMIN'), asyncHandler(async (
         slug: clinic.slug,
         dncCount,
         dnrCount,
+        clinicalDnrCount,
         totalLeads,
         dncRate: totalLeads > 0 ? parseFloat((dncCount / totalLeads * 100).toFixed(1)) : 0,
         dnrRate: totalLeads > 0 ? parseFloat((dnrCount / totalLeads * 100).toFixed(1)) : 0,
@@ -145,7 +147,7 @@ router.get('/clinic/:clinicId', requireRole('ADMIN', 'SUPER_ADMIN'), asyncHandle
     ...(Object.keys(dateFilter).length > 0 && { createdAt: dateFilter }),
   };
 
-  const statuses = ['NEW', 'ATTEMPTING', 'CONNECTED', 'APPOINTMENT_BOOKED', 'VISITED', 'TREATMENT_STARTED', 'RESCHEDULED', 'LOST', 'DNC', 'DNR'] as const;
+  const statuses = ['NEW', 'ATTEMPTING', 'CONNECTED', 'APPOINTMENT_BOOKED', 'VISITED', 'TREATMENT_STARTED', 'RESCHEDULED', 'LOST', 'DNC', 'DNR', 'CLINICAL_DNR'] as const;
   const sources = ['META_ADS', 'GOOGLE_ADS', 'ORGANIC', 'WHATSAPP', 'REFERRAL', 'WALK_IN', 'IVR', 'OTHER'] as const;
 
   const [statusCounts, sourceCounts, totalLeads, overdueFollowUps, leads] = await Promise.all([
@@ -162,7 +164,7 @@ router.get('/clinic/:clinicId', requireRole('ADMIN', 'SUPER_ADMIN'), asyncHandle
       where: {
         ...baseWhere,
         followUpDate: { lt: new Date() },
-        status: { notIn: ['DNC', 'DNR', 'LOST', 'VISITED', 'TREATMENT_STARTED'] },
+        status: { notIn: ['DNC', 'DNR', 'CLINICAL_DNR', 'LOST', 'VISITED', 'TREATMENT_STARTED'] },
       },
     }),
     req.db.lead.findMany({
@@ -228,7 +230,7 @@ router.get('/full', requireRole('ADMIN', 'SUPER_ADMIN'), asyncHandler(async (req
     ...(Object.keys(dateFilter).length > 0 && { createdAt: dateFilter }),
   };
 
-  const statuses = ['NEW', 'ATTEMPTING', 'CONNECTED', 'APPOINTMENT_BOOKED', 'VISITED', 'TREATMENT_STARTED', 'RESCHEDULED', 'LOST', 'DNC', 'DNR'] as const;
+  const statuses = ['NEW', 'ATTEMPTING', 'CONNECTED', 'APPOINTMENT_BOOKED', 'VISITED', 'TREATMENT_STARTED', 'RESCHEDULED', 'LOST', 'DNC', 'DNR', 'CLINICAL_DNR'] as const;
 
   // Overall stats
   const [statusCounts, totalLeads] = await Promise.all([
@@ -291,7 +293,7 @@ router.get('/export/dnc-dnr', requireRole('ADMIN', 'SUPER_ADMIN'), asyncHandler(
   const leads = await req.db.lead.findMany({
     where: {
       tenantId: req.tenant.id,
-      status: { in: ['DNC', 'DNR'] },
+      status: { in: ['DNC', 'DNR', 'CLINICAL_DNR'] },
       deletedAt: null,
     },
     include: {

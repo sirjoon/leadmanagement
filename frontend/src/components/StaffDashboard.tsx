@@ -94,7 +94,7 @@ interface Appointment {
   clinic: Clinic;
 }
 
-type AppointmentStatus = 'SCHEDULED' | 'CONFIRMED' | 'COMPLETED' | 'CANCELLED' | 'NO_SHOW' | 'RESCHEDULED' | 'DNR' | 'TWC';
+type AppointmentStatus = 'SCHEDULED' | 'CONFIRMED' | 'COMPLETED' | 'CANCELLED' | 'NO_SHOW' | 'RESCHEDULED' | 'DNR' | 'CLINICAL_DNR' | 'TWC';
 
 const statusConfig: Record<AppointmentStatus, { label: string; color: string; bgColor: string; icon: React.ElementType }> = {
   SCHEDULED: { label: 'Scheduled', color: 'text-blue-700', bgColor: 'bg-blue-100', icon: Clock },
@@ -104,7 +104,8 @@ const statusConfig: Record<AppointmentStatus, { label: string; color: string; bg
   NO_SHOW: { label: 'Lost', color: 'text-red-700', bgColor: 'bg-red-100', icon: XCircle },
   RESCHEDULED: { label: 'Rescheduled', color: 'text-amber-700', bgColor: 'bg-amber-100', icon: RefreshCw },
   DNR: { label: 'DNR', color: 'text-orange-700', bgColor: 'bg-orange-100', icon: PhoneOff },
-  TWC: { label: 'TWC', color: 'text-purple-700', bgColor: 'bg-purple-100', icon: PhoneCall },
+  CLINICAL_DNR: { label: 'Clinical DNR', color: 'text-purple-700', bgColor: 'bg-purple-100', icon: PhoneOff },
+  TWC: { label: 'TWC', color: 'text-cyan-700', bgColor: 'bg-cyan-100', icon: PhoneCall },
 };
 
 const sourceLabels: Record<string, string> = {
@@ -221,8 +222,8 @@ export default function StaffDashboard() {
   };
 
   const handleStatusUpdate = async (appointmentId: string, newStatus: AppointmentStatus, patientName?: string) => {
-    // DNR requires confirmation dialog (Story 3)
-    if (newStatus === 'DNR') {
+    // Clinical DNR requires confirmation dialog
+    if (newStatus === 'CLINICAL_DNR') {
       setDnrConfirm({ appointmentId, patientName: patientName || 'this patient' });
       return;
     }
@@ -243,7 +244,7 @@ export default function StaffDashboard() {
     setDnrConfirm(null);
     setUpdating(dnrConfirm.appointmentId);
     try {
-      await api.patch(`/appointments/${dnrConfirm.appointmentId}`, { status: 'DNR' });
+      await api.patch(`/appointments/${dnrConfirm.appointmentId}`, { status: 'CLINICAL_DNR' });
       await fetchAppointments();
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Failed to update status');
@@ -738,7 +739,7 @@ export default function StaffDashboard() {
                             Update Status
                           </p>
                           <div className="flex flex-wrap gap-2">
-                            {(['CONFIRMED', 'COMPLETED', 'NO_SHOW', 'DNR', 'TWC'] as AppointmentStatus[]).map(
+                            {(['CONFIRMED', 'COMPLETED', 'NO_SHOW', 'CLINICAL_DNR', 'TWC'] as AppointmentStatus[]).map(
                               (status) => {
                                 const cfg = statusConfig[status];
                                 return (

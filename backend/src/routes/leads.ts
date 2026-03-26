@@ -20,7 +20,7 @@ const router = Router();
 // Patient-journey statuses that clinic staff can access via journey tabs
 // (Visited, Treatment, Treatment Denied, DNR/DNC, Lost)
 const PATIENT_JOURNEY_STATUSES: LeadStatus[] = [
-  'VISITED', 'TREATMENT_STARTED', 'TREATMENT_COMPLETED', 'TREATMENT_DENIED', 'LOST', 'DNR', 'DNC', 'TWC',
+  'VISITED', 'TREATMENT_STARTED', 'TREATMENT_COMPLETED', 'TREATMENT_DENIED', 'LOST', 'DNR', 'CLINICAL_DNR', 'DNC', 'TWC',
 ];
 
 // Lead User (Telecaller) can only set these statuses; once lead is assigned to clinic they cannot see it

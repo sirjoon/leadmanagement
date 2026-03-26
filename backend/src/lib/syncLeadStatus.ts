@@ -14,6 +14,7 @@ const appointmentToLeadStatus: Record<string, LeadStatus> = {
   COMPLETED: 'VISITED',
   NO_SHOW: 'LOST',
   DNR: 'DNR',
+  CLINICAL_DNR: 'CLINICAL_DNR',
   TWC: 'TWC',
   RESCHEDULED: 'RESCHEDULED',
 };
@@ -33,7 +34,7 @@ export async function syncLeadStatuses(db: PrismaClient): Promise<void> {
         deletedAt: null,
         appointments: {
           some: {
-            status: { in: ['COMPLETED', 'NO_SHOW', 'DNR', 'TWC'] },
+            status: { in: ['COMPLETED', 'NO_SHOW', 'DNR', 'CLINICAL_DNR', 'TWC'] },
           },
         },
       },
