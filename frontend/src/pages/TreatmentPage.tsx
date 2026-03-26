@@ -6,7 +6,6 @@ import {
   Stethoscope,
   CheckCircle2,
   XCircle,
-  PhoneOff,
   Clock,
   Calendar,
   Loader2,
@@ -52,13 +51,6 @@ const treatmentActions: PatientAction[] = [
     status: 'TREATMENT_STARTED' as LeadStatus, // placeholder — opens schedule modal
     color: 'bg-teal-500 text-white hover:bg-teal-600',
     icon: <Calendar className="h-3.5 w-3.5" />,
-  },
-  {
-    label: 'Clinical DNR',
-    status: 'CLINICAL_DNR' as LeadStatus,
-    color: 'bg-purple-500 text-white hover:bg-purple-600',
-    icon: <PhoneOff className="h-3.5 w-3.5" />,
-    requiresConfirm: true,
   },
   {
     label: 'Lost',

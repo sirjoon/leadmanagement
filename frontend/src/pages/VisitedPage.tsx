@@ -5,7 +5,6 @@ import {
   AlertCircle,
   CheckCircle2,
   XCircle,
-  PhoneOff,
   Clock,
 } from 'lucide-react';
 import { type Lead, type LeadStatus, useLeadStore } from '../store/leadStore';
@@ -35,13 +34,6 @@ const visitedActions: PatientAction[] = [
     status: 'TREATMENT_DENIED',
     color: 'bg-rose-500 text-white hover:bg-rose-600',
     icon: <XCircle className="h-3.5 w-3.5" />,
-  },
-  {
-    label: 'Clinical DNR',
-    status: 'CLINICAL_DNR' as LeadStatus,
-    color: 'bg-purple-500 text-white hover:bg-purple-600',
-    icon: <PhoneOff className="h-3.5 w-3.5" />,
-    requiresConfirm: true,
   },
   {
     label: 'Lost',
