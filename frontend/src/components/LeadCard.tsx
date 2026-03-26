@@ -66,8 +66,8 @@ const statusLabels: Record<LeadStatus, string> = {
 // Statuses that require mandatory follow-up (User Story L2, L3)
 // "ATTEMPTING" is excluded - no follow-up required
 const STATUSES_REQUIRING_FOLLOWUP: LeadStatus[] = [
-  'CONNECTED', 'APPOINTMENT_BOOKED', 'VISITED', 'TREATMENT_STARTED',
-  'RESCHEDULED', 'LOST', 'DNA',
+  'CONNECTED', 'APPOINTMENT_BOOKED',
+  'RESCHEDULED', 'DNA',
 ];
 
 // All statuses for admin, limited for lead users
