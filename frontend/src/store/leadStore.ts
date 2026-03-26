@@ -98,6 +98,8 @@ export interface LeadFilters {
   followUpTo?: string;
   /** Filter to leads with a cancelled appointment (API: appointmentStatus=CANCELLED) */
   appointmentStatus?: 'CANCELLED';
+  /** Filter leads currently in treatment */
+  inTreatment?: boolean;
   page?: number;
   limit?: number;
   sortBy?: 'createdAt' | 'followUpDate' | 'updatedAt' | 'name' | 'enquiryDate';

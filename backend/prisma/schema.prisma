@@ -103,6 +103,9 @@ model Lead {
   // Follow-up tracking (cross-cutting — appears in Follow-ups tab)
   followUp        Boolean   @default(false)
 
+  // Treatment tracking — stays true from TREATMENT_STARTED until TREATMENT_COMPLETED
+  inTreatment     Boolean   @default(false)
+
   // Treatment (populated when status = VISITED)
   treatmentPlan  String?  @db.Text
   treatmentNotes String?  @db.Text

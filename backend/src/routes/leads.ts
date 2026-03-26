@@ -76,6 +76,8 @@ const leadFiltersSchema = z.object({
   followUpTo: z.string().datetime().optional(),
   /** Filter leads whose latest/any appointment is cancelled (status remains APPOINTMENT_BOOKED) */
   appointmentStatus: z.enum(['CANCELLED']).optional(),
+  /** Filter leads currently in treatment (inTreatment flag) */
+  inTreatment: z.coerce.boolean().optional(),
   page: z.coerce.number().int().positive().default(1),
   limit: z.coerce.number().int().positive().max(100).default(20),
   sortBy: z.enum(['createdAt', 'followUpDate', 'updatedAt', 'name', 'enquiryDate']).default('updatedAt'),
@@ -97,10 +99,11 @@ router.get('/', asyncHandler(async (req: AuthenticatedRequest, res: Response) =>
     return;
   }
 
-  // CLINIC_STAFF: only allowed for patient-journey statuses, scoped to their clinic
+  // CLINIC_STAFF: only allowed for patient-journey statuses (or inTreatment filter), scoped to their clinic
   if (isClinicStaff(req.tenant.role)) {
     const requestedStatus = req.query.status as string | undefined;
-    if (!requestedStatus || !PATIENT_JOURNEY_STATUSES.includes(requestedStatus as LeadStatus)) {
+    const requestedInTreatment = req.query.inTreatment as string | undefined;
+    if ((!requestedStatus || !PATIENT_JOURNEY_STATUSES.includes(requestedStatus as LeadStatus)) && requestedInTreatment !== 'true') {
       res.status(403).json({
         error: 'Access denied',
         message: 'Clinic staff do not have access to lead management. Please use the Appointments section.',
@@ -140,7 +143,9 @@ router.get('/', asyncHandler(async (req: AuthenticatedRequest, res: Response) =>
   }
 
   // Apply filters
-  if (filterCriteria.status) {
+  if (filterCriteria.inTreatment) {
+    where.inTreatment = true;
+  } else if (filterCriteria.status) {
     where.status = filterCriteria.status;
   }
   if (filterCriteria.priority) {
@@ -700,15 +705,22 @@ router.patch('/:id', asyncHandler(async (req: AuthenticatedRequest, res: Respons
   const updateData: Record<string, unknown> = {
     ...data,
     enquiryDate: data.enquiryDate ? new Date(data.enquiryDate) : undefined,
-    followUpDate: data.followUpDate === null 
-      ? null 
-      : data.followUpDate 
-        ? new Date(data.followUpDate) 
+    followUpDate: data.followUpDate === null
+      ? null
+      : data.followUpDate
+        ? new Date(data.followUpDate)
         : undefined,
     lastContactedAt: data.lastContactedAt
       ? new Date(data.lastContactedAt)
       : new Date(), // Auto-update on every lead modification
   };
+
+  // Treatment tracking: set inTreatment flag based on status transitions
+  if (data.status === 'TREATMENT_STARTED') {
+    updateData.inTreatment = true;
+  } else if (data.status === 'TREATMENT_COMPLETED') {
+    updateData.inTreatment = false;
+  }
 
   const lead = await req.db.lead.update({
     where: { id: req.params.id },

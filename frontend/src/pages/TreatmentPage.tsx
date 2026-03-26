@@ -105,7 +105,7 @@ export default function TreatmentPage() {
   const [leadAppointments, setLeadAppointments] = useState<Record<string, Appointment>>({});
 
   const buildFilters = useCallback(() => ({
-    status: 'TREATMENT_STARTED' as LeadStatus,
+    inTreatment: true,
     search: searchQuery || undefined,
     clinicId: clinicFilter || undefined,
     sortBy,
