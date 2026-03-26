@@ -78,6 +78,7 @@ export interface Lead {
   treatmentPlan: string | null;
   treatmentNotes: string | null;
   followUp: boolean;
+  inTreatment: boolean;
   createdAt: string;
   updatedAt: string;
   _count?: {

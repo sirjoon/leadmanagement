@@ -9,6 +9,7 @@ import {
   Calendar,
   FileText,
   Loader2,
+  Stethoscope,
 } from 'lucide-react';
 import { type Lead, type LeadStatus, useLeadStore } from '../store/leadStore';
 import { clsx } from 'clsx';
@@ -265,6 +266,12 @@ export default function PatientCard({ lead, index, actions, onAction, onSchedule
                 ? 'Cancelled appointment'
                 : (statusLabels[lead.status] || lead.status)}
             </span>
+            {lead.inTreatment && lead.status !== 'TREATMENT_STARTED' && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2 py-0.5 text-xs font-semibold text-blue-700 ring-1 ring-inset ring-blue-500/20">
+                <Stethoscope className="h-3 w-3" />
+                In Treatment
+              </span>
+            )}
           </div>
 
           <h3 className="mt-0.5 truncate text-sm font-medium text-slate-800">{lead.name}</h3>

@@ -17,6 +17,7 @@ import {
   RefreshCw,
   Loader2,
   XCircle,
+  Stethoscope,
 } from 'lucide-react';
 import { type Lead, type LeadStatus, type Priority, type LeadSource, useLeadStore } from '../store/leadStore';
 import { useAuthStore, isAdminRole, isLeadUserRole } from '../store/authStore';
@@ -686,6 +687,12 @@ export default function LeadCard({ lead, index, onSelect: _onSelect }: LeadCardP
                 ? 'Cancelled appointment'
                 : statusLabels[lead.status]}
             </span>
+            {lead.inTreatment && lead.status !== 'TREATMENT_STARTED' && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2 py-0.5 text-xs font-semibold text-blue-700 ring-1 ring-inset ring-blue-500/20">
+                <Stethoscope className="h-3 w-3" />
+                In Treatment
+              </span>
+            )}
           </div>
 
           <div className="mt-0.5 flex items-center gap-2 flex-wrap">
