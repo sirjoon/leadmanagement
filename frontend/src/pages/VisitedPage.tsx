@@ -76,6 +76,7 @@ export default function VisitedPage() {
 
   const buildFilters = useCallback(() => ({
     status: 'VISITED' as LeadStatus,
+    inTreatment: undefined,
     search: searchQuery || undefined,
     clinicId: clinicFilter || undefined,
     sortBy,

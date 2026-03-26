@@ -69,6 +69,7 @@ export default function LostPage() {
 
   const buildFilters = useCallback(() => ({
     status: 'LOST' as LeadStatus,
+    inTreatment: undefined,
     search: searchQuery || undefined,
     clinicId: clinicFilter || undefined,
     sortBy,

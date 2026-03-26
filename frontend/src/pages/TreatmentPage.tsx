@@ -106,6 +106,7 @@ export default function TreatmentPage() {
 
   const buildFilters = useCallback(() => ({
     inTreatment: true,
+    status: undefined,
     search: searchQuery || undefined,
     clinicId: clinicFilter || undefined,
     sortBy,

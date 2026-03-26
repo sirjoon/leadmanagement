@@ -47,16 +47,16 @@ export default function LeadsPage() {
     if (urlStatus) {
       const status = urlStatus as LeadStatus;
       // Status-tab navigation should ignore stale search/priority filters from shared store
-      setFilters({ search: undefined, priority: undefined, appointmentStatus: undefined, status, page: 1 });
-      fetchLeads({ search: undefined, priority: undefined, appointmentStatus: undefined, status, page: 1 });
+      setFilters({ search: undefined, priority: undefined, appointmentStatus: undefined, inTreatment: undefined, status, page: 1 });
+      fetchLeads({ search: undefined, priority: undefined, appointmentStatus: undefined, inTreatment: undefined, status, page: 1 });
     } else if (urlSearch) {
       setSearchQuery(urlSearch);
-      setFilters({ search: urlSearch, status: undefined, page: 1 });
-      fetchLeads({ search: urlSearch, status: undefined, page: 1 });
+      setFilters({ search: urlSearch, status: undefined, inTreatment: undefined, page: 1 });
+      fetchLeads({ search: urlSearch, status: undefined, inTreatment: undefined, page: 1 });
     } else {
       // Default Leads tab should show full list (no stale search/filters)
-      setFilters({ search: undefined, status: undefined, priority: undefined, appointmentStatus: undefined, page: 1 });
-      fetchLeads({ search: undefined, status: undefined, priority: undefined, appointmentStatus: undefined, page: 1 });
+      setFilters({ search: undefined, status: undefined, priority: undefined, appointmentStatus: undefined, inTreatment: undefined, page: 1 });
+      fetchLeads({ search: undefined, status: undefined, priority: undefined, appointmentStatus: undefined, inTreatment: undefined, page: 1 });
     }
     if (isAdmin) {
       fetchTbdLeads();

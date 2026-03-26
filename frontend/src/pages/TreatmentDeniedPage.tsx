@@ -81,6 +81,7 @@ export default function TreatmentDeniedPage() {
 
   const buildFilters = useCallback(() => ({
     status: 'TREATMENT_DENIED' as LeadStatus,
+    inTreatment: undefined,
     search: searchQuery || undefined,
     clinicId: clinicFilter || undefined,
     sortBy,

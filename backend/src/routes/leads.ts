@@ -145,7 +145,8 @@ router.get('/', asyncHandler(async (req: AuthenticatedRequest, res: Response) =>
   // Apply filters
   if (filterCriteria.inTreatment) {
     where.inTreatment = true;
-  } else if (filterCriteria.status) {
+  }
+  if (filterCriteria.status) {
     where.status = filterCriteria.status;
   }
   if (filterCriteria.priority) {

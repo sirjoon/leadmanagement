@@ -61,6 +61,7 @@ export default function TreatmentCompletedPage() {
 
   const buildFilters = useCallback(() => ({
     status: 'TREATMENT_COMPLETED' as LeadStatus,
+    inTreatment: undefined,
     search: searchQuery || undefined,
     clinicId: clinicFilter || undefined,
     sortBy,
