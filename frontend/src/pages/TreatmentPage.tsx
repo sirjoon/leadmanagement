@@ -112,7 +112,7 @@ export default function TreatmentPage() {
     try {
       const res = await api.get('/appointments', {
         params: {
-          status: 'SCHEDULED,CONFIRMED',
+          status: 'SCHEDULED',
           fromDate: new Date().toISOString(),
           limit: 50,
         },
