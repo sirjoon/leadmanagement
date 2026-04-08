@@ -148,7 +148,7 @@ router.get('/clinic/:clinicId', requireRole('ADMIN', 'SUPER_ADMIN'), asyncHandle
   };
 
   const statuses = ['NEW', 'ATTEMPTING', 'CONNECTED', 'APPOINTMENT_BOOKED', 'VISITED', 'TREATMENT_STARTED', 'RESCHEDULED', 'LOST', 'DNC', 'DNR', 'CLINICAL_DNR'] as const;
-  const sources = ['META_ADS', 'GOOGLE_ADS', 'ORGANIC', 'WHATSAPP', 'REFERRAL', 'WALK_IN', 'IVR', 'OTHER'] as const;
+  const sources = ['META_ADS', 'GOOGLE_ADS', 'ORGANIC', 'WHATSAPP', 'REFERRAL', 'WALK_IN', 'IVR', 'DENTAL_CAMP', 'PAPER_INSERT', 'PAMPHLET', 'NEWSPAPER_AD', 'HOARDING', 'EVENT', 'OTHER'] as const;
 
   const [statusCounts, sourceCounts, totalLeads, overdueFollowUps, leads] = await Promise.all([
     Promise.all(statuses.map(async (status) => ({

@@ -269,7 +269,7 @@ router.get('/by-source', requireRole('ADMIN', 'SUPER_ADMIN'), asyncHandler(async
     ...(clinicId && { clinicId }),
   };
 
-  const sources = ['META_ADS', 'GOOGLE_ADS', 'ORGANIC', 'WHATSAPP', 'REFERRAL', 'WALK_IN', 'IVR', 'OTHER'] as const;
+  const sources = ['META_ADS', 'GOOGLE_ADS', 'ORGANIC', 'WHATSAPP', 'REFERRAL', 'WALK_IN', 'IVR', 'DENTAL_CAMP', 'PAPER_INSERT', 'PAMPHLET', 'NEWSPAPER_AD', 'HOARDING', 'EVENT', 'OTHER'] as const;
 
   const sourceCounts = await Promise.all(
     sources.map(async (source) => {

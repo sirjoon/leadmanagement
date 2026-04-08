@@ -101,6 +101,12 @@ const sourceLabels: Record<string, string> = {
   REFERRAL: 'Referral',
   WALK_IN: 'Walk-in',
   IVR: 'IVR',
+  DENTAL_CAMP: 'Dental Camp',
+  PAPER_INSERT: 'Paper Insert',
+  PAMPHLET: 'Pamphlet',
+  NEWSPAPER_AD: 'Newspaper Ad',
+  HOARDING: 'Hoarding',
+  EVENT: 'Event',
   OTHER: 'Other',
 };
 
@@ -112,6 +118,12 @@ const allSources: { value: LeadSource; label: string }[] = [
   { value: 'REFERRAL', label: 'Referral' },
   { value: 'WALK_IN', label: 'Walk-in' },
   { value: 'IVR', label: 'IVR' },
+  { value: 'DENTAL_CAMP', label: 'Dental Camp' },
+  { value: 'PAPER_INSERT', label: 'Paper Insert' },
+  { value: 'PAMPHLET', label: 'Pamphlet' },
+  { value: 'NEWSPAPER_AD', label: 'Newspaper Ad' },
+  { value: 'HOARDING', label: 'Hoarding' },
+  { value: 'EVENT', label: 'Event' },
   { value: 'OTHER', label: 'Other' },
 ];
 

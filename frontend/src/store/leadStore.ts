@@ -20,14 +20,20 @@ export type LeadStatus =
 
 export type Priority = 'HOT' | 'WARM' | 'COLD';
 
-export type LeadSource = 
-  | 'META_ADS' 
-  | 'GOOGLE_ADS' 
-  | 'ORGANIC' 
-  | 'WHATSAPP' 
-  | 'REFERRAL' 
-  | 'WALK_IN' 
-  | 'IVR' 
+export type LeadSource =
+  | 'META_ADS'
+  | 'GOOGLE_ADS'
+  | 'ORGANIC'
+  | 'WHATSAPP'
+  | 'REFERRAL'
+  | 'WALK_IN'
+  | 'IVR'
+  | 'DENTAL_CAMP'
+  | 'PAPER_INSERT'
+  | 'PAMPHLET'
+  | 'NEWSPAPER_AD'
+  | 'HOARDING'
+  | 'EVENT'
   | 'OTHER';
 
 export interface Clinic {

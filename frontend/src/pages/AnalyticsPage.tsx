@@ -41,6 +41,12 @@ const sourceLabels: Record<string, string> = {
   REFERRAL: 'Referral',
   WALK_IN: 'Walk-in',
   IVR: 'IVR',
+  DENTAL_CAMP: 'Dental Camp',
+  PAPER_INSERT: 'Paper Insert',
+  PAMPHLET: 'Pamphlet',
+  NEWSPAPER_AD: 'Newspaper Ad',
+  HOARDING: 'Hoarding',
+  EVENT: 'Event',
   OTHER: 'Other',
 };
 

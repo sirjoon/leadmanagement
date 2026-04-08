@@ -43,6 +43,12 @@ const sources: { value: LeadSource; label: string }[] = [
   { value: 'REFERRAL', label: 'Referral' },
   { value: 'WALK_IN', label: 'Walk-in' },
   { value: 'IVR', label: 'IVR' },
+  { value: 'DENTAL_CAMP', label: 'Dental Camp' },
+  { value: 'PAPER_INSERT', label: 'Paper Insert' },
+  { value: 'PAMPHLET', label: 'Pamphlet' },
+  { value: 'NEWSPAPER_AD', label: 'Newspaper Ad' },
+  { value: 'HOARDING', label: 'Hoarding' },
+  { value: 'EVENT', label: 'Event' },
   { value: 'OTHER', label: 'Other' },
 ];
 
