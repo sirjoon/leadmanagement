@@ -71,7 +71,7 @@ const navItems: NavItem[] = [
   { path: '/follow-ups', label: 'Follow-ups', icon: Clock, access: 'all', section: 'patient' },
   { path: '/clinical-dnr', label: 'Clinical DNR', icon: PhoneOff, access: 'all', section: 'patient' },
   { path: '/dnr-dnc', label: 'DNR/DNC', icon: PhoneOff, access: 'no_staff', section: 'patient' },
-  { path: '/lost', label: 'Lost', icon: UserX, access: 'no_staff', section: 'patient' },
+  { path: '/lost', label: 'Lost', icon: UserX, access: 'all', section: 'patient' },
   // Admin tools
   { path: '/reports', label: 'Reports', icon: FileText, access: 'no_staff', section: 'admin' },
   { path: '/analytics', label: 'Analytics', icon: BarChart3, access: 'admin', section: 'admin' },

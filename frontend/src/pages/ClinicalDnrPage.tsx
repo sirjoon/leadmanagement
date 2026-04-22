@@ -6,6 +6,7 @@ import {
   PhoneOff,
   Calendar,
   Stethoscope,
+  Clock,
 } from 'lucide-react';
 import { type Lead, type LeadStatus, useLeadStore } from '../store/leadStore';
 import { useAuthStore, isAdminRole, isClinicStaffRole } from '../store/authStore';
@@ -36,6 +37,12 @@ const clinicalDnrActions: PatientAction[] = [
     color: 'bg-teal-500 text-white hover:bg-teal-600',
     icon: <Stethoscope className="h-3.5 w-3.5" />,
   },
+  {
+    label: 'Lost',
+    status: 'LOST' as LeadStatus,
+    color: 'bg-slate-500 text-white hover:bg-slate-600',
+    icon: <Clock className="h-3.5 w-3.5" />,
+  },
 ];
 
 export default function ClinicalDnrPage() {
@@ -49,6 +56,11 @@ export default function ClinicalDnrPage() {
 
   const { user } = useAuthStore();
   const isAdmin = user?.role ? isAdminRole(user.role) : false;
+  const isStaff = user?.role ? isClinicStaffRole(user.role) : false;
+
+  const filteredActions = isStaff
+    ? clinicalDnrActions.filter(a => !['DNR', 'LOST'].includes(a.status))
+    : clinicalDnrActions;
 
   const [searchQuery, setSearchQuery] = useState('');
   const [clinicFilter, setClinicFilter] = useState('');
@@ -231,7 +243,7 @@ export default function ClinicalDnrPage() {
             key={lead.id}
             lead={lead}
             index={index}
-            actions={clinicalDnrActions}
+            actions={filteredActions}
             onAction={handleAction}
             onScheduleAppointment={(lead) => setScheduleModal({ lead, targetStatus: 'APPOINTMENT_BOOKED' })}
           />
