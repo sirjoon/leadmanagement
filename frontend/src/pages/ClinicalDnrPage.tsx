@@ -9,7 +9,7 @@ import {
   Clock,
 } from 'lucide-react';
 import { type Lead, type LeadStatus, useLeadStore } from '../store/leadStore';
-import { useAuthStore, isAdminRole, isClinicStaffRole } from '../store/authStore';
+import { useAuthStore, isAdminRole } from '../store/authStore';
 import { api } from '../api/client';
 import { clsx } from 'clsx';
 import PatientCard, { type PatientAction } from '../components/PatientCard';
@@ -56,11 +56,7 @@ export default function ClinicalDnrPage() {
 
   const { user } = useAuthStore();
   const isAdmin = user?.role ? isAdminRole(user.role) : false;
-  const isStaff = user?.role ? isClinicStaffRole(user.role) : false;
 
-  const filteredActions = isStaff
-    ? clinicalDnrActions.filter(a => !['DNR', 'LOST'].includes(a.status))
-    : clinicalDnrActions;
 
   const [searchQuery, setSearchQuery] = useState('');
   const [clinicFilter, setClinicFilter] = useState('');
@@ -243,7 +239,7 @@ export default function ClinicalDnrPage() {
             key={lead.id}
             lead={lead}
             index={index}
-            actions={filteredActions}
+            actions={clinicalDnrActions}
             onAction={handleAction}
             onScheduleAppointment={(lead) => setScheduleModal({ lead, targetStatus: 'APPOINTMENT_BOOKED' })}
           />
